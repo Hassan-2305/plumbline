@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageSquareHeart } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Button, Label, Modal, cx, inputCls } from "./ui";
@@ -29,10 +29,10 @@ export function FeedbackButton({ compact }: { compact?: boolean }) {
         onClick={() => setOpen(true)}
         aria-label="Give feedback"
         className={cx(
-          compact ? "rounded-md p-1.5 text-stone-500 hover:bg-stone-100" : "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-stone-600 hover:bg-stone-200/50 hover:text-stone-950",
+          compact ? "rounded-md p-1.5 text-stone-500 hover:bg-stone-100" : "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[14px] text-stone-700 hover:bg-stone-100",
         )}
       >
-        <MessageSquareHeart size={compact ? 18 : 16} className={compact ? "" : "text-stone-400"} />
+        <MessageSquare size={18} strokeWidth={1.75} className={compact ? "" : "text-stone-500"} />
         {!compact && "Give feedback"}
       </button>
       <Modal
@@ -96,7 +96,7 @@ export function FeedbackButton({ compact }: { compact?: boolean }) {
                     type="button"
                     aria-pressed={ease === n}
                     onClick={() => setEase(n)}
-                    className={cx("h-9 w-9 rounded-lg text-sm font-medium ring-1", ease === n ? "bg-orange-600 text-white ring-orange-600" : "ring-stone-200 text-stone-700 hover:bg-stone-50")}
+                    className={cx("h-9 w-9 rounded-lg text-sm font-medium ring-1", ease === n ? "bg-amber-600 text-white ring-amber-600" : "ring-stone-200 text-stone-700 hover:bg-stone-50")}
                   >
                     {n}
                   </button>

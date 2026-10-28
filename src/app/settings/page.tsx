@@ -2,12 +2,12 @@
 
 import { CheckCircle2, Download, RotateCcw, Sparkles, XCircle } from "lucide-react";
 import { Badge, Button, Card, PageHeader, SectionTitle, Skeleton } from "@/components/ui";
-import { activeBrand, deleteBrand, loadDemo, resetDemo, setActiveBrand, setRole, useAppState } from "@/lib/store";
+import { activeBrand, deleteBrand, loadDemo, resetDemo, setActiveBrand, useAppState } from "@/lib/store";
 import { BrandMark, CreateBrandModal } from "@/components/brands/BrandSwitcher";
-import { can, PERMISSION_ROWS, ROLES } from "@/lib/roles";
 import { PrivacySection } from "@/components/settings/PrivacySection";
 import { FeedbackCard } from "@/components/settings/FeedbackCard";
 import { useState } from "react";
+import Link from "next/link";
 import { useAiStatus } from "@/lib/useAiStatus";
 
 export default function SettingsPage() {
@@ -98,48 +98,11 @@ export default function SettingsPage() {
       </section>
 
       <section>
-        <SectionTitle>Roles and permissions (simulated)</SectionTitle>
-        <Card className="p-5 text-sm space-y-4">
-          <div className="grid gap-2 sm:grid-cols-3">
-            {ROLES.map((r) => (
-              <button
-                key={r.id}
-                onClick={() => setRole(r.id)}
-                aria-pressed={state.role === r.id}
-                className={`rounded-lg border p-3 text-left ${state.role === r.id ? "border-stone-900 bg-stone-50" : "border-stone-200 hover:border-stone-300"}`}
-              >
-                <div className="text-sm font-medium text-stone-900">{r.label}</div>
-                <div className="text-[11px] text-stone-500">{r.person}</div>
-                <div className="mt-1 text-xs text-stone-600">{r.blurb}</div>
-              </button>
-            ))}
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[480px] text-xs">
-              <thead>
-                <tr className="text-left text-stone-500">
-                  <th className="py-1.5 font-medium">Permission</th>
-                  {ROLES.map((r) => (
-                    <th key={r.id} className="py-1.5 text-center font-medium">{r.label}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-100">
-                {PERMISSION_ROWS.map((row) => (
-                  <tr key={row.action}>
-                    <td className="py-1.5 text-stone-700">{row.label}</td>
-                    {ROLES.map((r) => (
-                      <td key={r.id} className="py-1.5 text-center">
-                        {can(r.id, row.action) ? <span className="text-emerald-700" aria-label="Allowed">✓</span> : <span className="text-stone-300" aria-label="Not allowed">—</span>}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-stone-600">There is no login. Roles are simulated so judges can try every step of the workflow; the permission rules are enforced in the app.</p>
-        </Card>
+        <SectionTitle>Team & permissions</SectionTitle>
+        <p className="text-[13px] text-stone-600">
+          People, roles and the permission matrix moved to <Link href="/team" className="text-accent-700 hover:underline">Team & permissions</Link>. Switch user from the profile menu at
+          the bottom of the sidebar.
+        </p>
       </section>
 
       <section>
@@ -187,7 +150,7 @@ function BrandsCard() {
   const active = activeBrand(state);
   return (
     <section>
-      <SectionTitle aside={<Button size="sm" onClick={() => setCreating(true)}>New brand</Button>}>Brands</SectionTitle>
+      <SectionTitle aside={<Button size="sm" onClick={() => setCreating(true)}>New workspace</Button>}>Workspaces</SectionTitle>
       <Card className="divide-y divide-stone-100">
         {state.brands.map((b) => {
           const count = state.items.filter((i) => i.brandId === b.id).length;
@@ -195,7 +158,7 @@ function BrandsCard() {
             <div key={b.id} className="flex items-center gap-3 px-4 py-3 text-sm">
               <BrandMark brand={b} />
               <div className="min-w-0 flex-1">
-                <div className="font-medium text-stone-900">{b.name} {b.fictional && <span className="text-xs font-normal text-orange-700">· fictional demo</span>}</div>
+                <div className="font-medium text-stone-900">{b.name} {b.fictional && <span className="text-xs font-normal text-amber-700">· fictional demo</span>}</div>
                 <div className="text-xs text-stone-500">
                   {b.rules.length} rules · {b.facts.length} facts · {count} content item{count === 1 ? "" : "s"}
                 </div>

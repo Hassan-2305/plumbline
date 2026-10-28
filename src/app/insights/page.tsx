@@ -44,12 +44,12 @@ export default function InsightsPage() {
 
       {ins.totalFindings === 0 ? (
         <Card className="p-8 text-sm text-stone-600">
-          No findings yet{includeSeeded ? "" : " in your own history"}. <Link href="/review/new" className="text-orange-700 underline">Run a review</Link> to start building insights.
+          No findings yet{includeSeeded ? "" : " in your own history"}. <Link href="/content/new" className="text-accent-700 underline">Run a review</Link> to start building insights.
         </Card>
       ) : (
         <>
           <section data-tour="confusing">
-            <SectionTitle><span className="flex items-center gap-1.5"><AlertTriangle size={14} className="text-orange-600" /> Potentially confusing guidelines</span></SectionTitle>
+            <SectionTitle><span className="flex items-center gap-1.5"><AlertTriangle size={14} className="text-amber-600" /> Potentially confusing guidelines</span></SectionTitle>
             <p className="-mt-1 mb-3 text-xs text-stone-500">
               Signal: a rule is dismissed as “Rule unclear” at least twice, or dismissed in at least half of 3+ findings. Dismissals are reviewer signals, not proof the jury was wrong.
             </p>
@@ -58,11 +58,11 @@ export default function InsightsPage() {
               {ins.confusing.map((r) => {
                 const conflict = brandConflicts(state).find((c) => c.ruleIds.includes(r.ruleId));
                 return (
-                  <Card key={r.ruleId} className="p-4 border-orange-300">
+                  <Card key={r.ruleId} className="p-4 border-amber-300">
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-sm font-semibold">{r.ruleId}</span>
                       <span className="text-sm text-stone-800">{r.title}</span>
-                      <Badge tone="orange" className="ml-auto">{Math.round(r.dismissRate * 100)}% dismissed</Badge>
+                      <Badge tone="amber" className="ml-auto">{Math.round(r.dismissRate * 100)}% dismissed</Badge>
                     </div>
                     <p className="mt-1 text-xs text-stone-600">
                       Flagged {r.flagged}× · dismissed {r.dismissed}× · “Rule unclear” {r.unclear}× · accepted {r.accepted}×
@@ -70,7 +70,7 @@ export default function InsightsPage() {
                     <ul className="mt-2 space-y-1">
                       {r.examples.slice(0, 3).map((e, i) => (
                         <li key={i} className="text-xs text-stone-700 border-l-2 border-stone-200 pl-2">
-                          <span className="font-medium">{e.item}</span>{e.seeded && <span className="text-orange-700"> (seeded)</span>} — {e.reason}
+                          <span className="font-medium">{e.item}</span>{e.seeded && <span className="text-amber-700"> (seeded)</span>} — {e.reason}
                           {e.note && <>: “{e.note}”</>}
                         </li>
                       ))}
@@ -83,7 +83,7 @@ export default function InsightsPage() {
                           : `Conflict ${conflict.ruleIds.join(" ↔ ")} was ${conflict.status}. Watch whether dismissals drop.`
                         : `Add worked examples to ${r.ruleId} that show what is and isn’t allowed, based on the dismissal notes above.`}
                       {conflict?.status === "open" && (
-                        <Link href="/guidelines" className="ml-1 inline-flex items-center gap-0.5 text-orange-700 font-medium">
+                        <Link href="/guidelines" className="ml-1 inline-flex items-center gap-0.5 text-amber-700 font-medium">
                           Review clarification <ArrowRight size={12} />
                         </Link>
                       )}
@@ -101,19 +101,19 @@ export default function InsightsPage() {
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={flaggedData} margin={{ left: -20, right: 8 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" vertical={false} />
-                    <XAxis dataKey="rule" tick={{ fontSize: 11, fill: "#52525b" }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#52525b" }} />
-                    <Tooltip cursor={{ fill: "#f4f4f5" }} contentStyle={{ fontSize: 12, borderRadius: 6 }} />
-                    <Bar dataKey="Accepted" stackId="a" fill="#18181b" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} />
+                    <XAxis dataKey="rule" tick={{ fontSize: 11, fill: "#737373" }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#737373" }} />
+                    <Tooltip cursor={{ fill: "#f5f5f5" }} contentStyle={{ fontSize: 12, borderRadius: 6 }} />
+                    <Bar dataKey="Accepted" stackId="a" fill="#44403c" />
                     <Bar dataKey="Dismissed" stackId="a" fill="#ea580c" />
-                    <Bar dataKey="Other" name="Open / escalated" stackId="a" fill="#d4d4d8" />
+                    <Bar dataKey="Other" name="Open / escalated" stackId="a" fill="#d6d3d1" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
               <div className="mt-2 flex gap-3 text-[11px] text-stone-600">
-                <span className="flex items-center gap-1"><span className="h-2 w-2 bg-stone-900" /> Accepted</span>
-                <span className="flex items-center gap-1"><span className="h-2 w-2 bg-orange-600" /> Dismissed</span>
+                <span className="flex items-center gap-1"><span className="h-2 w-2 bg-stone-800" /> Accepted</span>
+                <span className="flex items-center gap-1"><span className="h-2 w-2 bg-accent-500" /> Dismissed</span>
                 <span className="flex items-center gap-1"><span className="h-2 w-2 bg-stone-300" /> Open / escalated</span>
               </div>
             </Card>
@@ -122,10 +122,10 @@ export default function InsightsPage() {
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={reasonData} layout="vertical" margin={{ left: 40, right: 12 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" horizontal={false} />
-                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: "#52525b" }} />
-                    <YAxis type="category" dataKey="reason" tick={{ fontSize: 11, fill: "#52525b" }} width={110} />
-                    <Tooltip cursor={{ fill: "#f4f4f5" }} contentStyle={{ fontSize: 12, borderRadius: 6 }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" horizontal={false} />
+                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: "#737373" }} />
+                    <YAxis type="category" dataKey="reason" tick={{ fontSize: 11, fill: "#737373" }} width={110} />
+                    <Tooltip cursor={{ fill: "#f5f5f5" }} contentStyle={{ fontSize: 12, borderRadius: 6 }} />
                     <Bar dataKey="count" name="Dismissals" fill="#ea580c" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -137,7 +137,7 @@ export default function InsightsPage() {
             <SectionTitle>Most frequently dismissed rules</SectionTitle>
             <Card className="overflow-x-auto">
               <table className="w-full text-sm min-w-[560px]">
-                <thead className="bg-stone-50 text-left text-[11px] uppercase tracking-wider text-stone-500">
+                <thead className="bg-stone-50 text-left text-[11px]r text-stone-500">
                   <tr>
                     <th className="px-4 py-2">Rule</th>
                     <th className="px-4 py-2">Flagged</th>

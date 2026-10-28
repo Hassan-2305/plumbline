@@ -9,7 +9,7 @@ export function RoleNote({ role, action = "approve" }: { role: AppState["role"];
   return (
     <p className="text-xs text-stone-500">
       Writers can propose changes. Only a reviewer can {action}.{" "}
-      <button className="text-orange-700 underline" onClick={() => setRole("reviewer")}>
+      <button className="text-accent-700 underline" onClick={() => setRole("reviewer")}>
         Switch to reviewer (simulated)
       </button>
     </p>

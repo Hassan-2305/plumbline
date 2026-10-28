@@ -21,10 +21,10 @@ export function ConflictCard({ c, state, tour }: { c: GuidelineConflict; state: 
   const reviewer = state.role === "reviewer";
 
   return (
-    <Card className={cx("p-5", !resolved && "border-orange-300")}>
+    <Card className={cx("p-5", !resolved && "border-amber-300")}>
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <span className="font-semibold text-stone-950">{c.ruleIds[0]} ↔ {c.ruleIds[1]}</span>
-        <Badge tone={resolved ? (c.status === "approved" ? "green" : "neutral") : "orange"}>
+        <Badge tone={resolved ? (c.status === "approved" ? "green" : "neutral") : "amber"}>
           {c.status === "open" ? "Needs decision" : c.status === "approved" ? "Revision approved" : "Revision rejected"}
         </Badge>
         {c.status === "approved" && c.impact && <ImpactBadge impact={c.impact} />}
@@ -49,18 +49,18 @@ export function ConflictCard({ c, state, tour }: { c: GuidelineConflict; state: 
                 </p>
               )}
             </div>,
-            i === 0 ? <ArrowLeftRight key="sep" size={18} className="self-center justify-self-center text-orange-600" /> : null,
+            i === 0 ? <ArrowLeftRight key="sep" size={18} className="self-center justify-self-center text-amber-600" /> : null,
           ];
         })}
       </div>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2 text-sm">
         <div>
-          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1">Why they may conflict</h4>
+          <h4 className="text-[11px] font-medium text-stone-500 mb-1">Why they may conflict</h4>
           <p className="text-stone-700">{c.why}</p>
         </div>
         <div>
-          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1">Where ambiguity matters</h4>
+          <h4 className="text-[11px] font-medium text-stone-500 mb-1">Where ambiguity matters</h4>
           <p className="text-stone-700">{c.exampleContext}</p>
         </div>
       </div>

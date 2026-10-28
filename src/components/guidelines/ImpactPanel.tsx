@@ -10,13 +10,13 @@ import type { Brand, ImpactSummary } from "@/lib/types";
 
 const VERDICT = {
   safe: { label: "Safe to ship", cls: "border-emerald-200 bg-emerald-50 text-emerald-900", icon: CheckCircle2 },
-  review: { label: "Ships with new flags — review them", cls: "border-orange-200 bg-orange-50 text-orange-950", icon: AlertTriangle },
+  review: { label: "Ships with new flags — review them", cls: "border-amber-200 bg-amber-50 text-amber-950", icon: AlertTriangle },
   risky: { label: "Risky — breaks real issues or approved content", cls: "border-red-200 bg-red-50 text-red-900", icon: ShieldAlert },
 } as const;
 
 export function ImpactBadge({ impact }: { impact?: ImpactSummary }) {
   if (!impact) return <Badge tone="outline">Not tested</Badge>;
-  const tone = impact.verdict === "safe" ? "green" : impact.verdict === "review" ? "orange" : "red";
+  const tone = impact.verdict === "safe" ? "green" : impact.verdict === "review" ? "amber" : "red";
   return <Badge tone={tone}>{impact.verdict === "safe" ? "Tested · safe" : impact.verdict === "review" ? "Tested · new flags" : "Tested · risky"}</Badge>;
 }
 
@@ -41,7 +41,7 @@ export function ImpactPanel({ propose, target, saved, tour }: { propose: (b: Bra
   const v = s ? VERDICT[s.verdict] : null;
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-stone-50/60 p-3">
+    <div className="rounded-lg border border-stone-200 bg-stone-50/60 p-3">
       <div className="flex flex-wrap items-center gap-2">
         <FlaskConical size={15} className="text-stone-600" />
         <span className="text-sm font-medium text-stone-900">Test this change</span>
@@ -89,8 +89,8 @@ export function ImpactPanel({ propose, target, saved, tour }: { propose: (b: Bra
                 <ul className="mt-2 space-y-1.5">
                   {report!.rows.map((r) => (
                     <li key={r.itemId} className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-xs">
-                      <Link href={`/review/${r.itemId}`} className="font-medium text-stone-900 hover:underline">{r.title}</Link>
-                      {r.seeded && <span className="text-orange-700"> · seeded</span>}
+                      <Link href={`/content/${r.itemId}`} className="font-medium text-stone-900 hover:underline">{r.title}</Link>
+                      {r.seeded && <span className="text-amber-700"> · seeded</span>}
                       {r.status === "approved" && <span className="text-stone-500"> · approved</span>}
                       {r.removed.map((f, i) => (
                         <div key={`r${i}`} className="mt-0.5 text-emerald-800">
@@ -105,7 +105,7 @@ export function ImpactPanel({ propose, target, saved, tour }: { propose: (b: Bra
                         </div>
                       ))}
                       {r.added.map((f, i) => (
-                        <div key={`a${i}`} className="mt-0.5 text-orange-800">
+                        <div key={`a${i}`} className="mt-0.5 text-amber-800">
                           + {f.title} <span className="text-stone-500">({f.severity})</span>
                         </div>
                       ))}
@@ -126,7 +126,7 @@ export function ImpactPanel({ propose, target, saved, tour }: { propose: (b: Bra
 }
 
 function Metric({ value, label, hint, tone }: { value: number; label: string; hint: string; tone: "green" | "red" | "orange" | "stone" }) {
-  const c = { green: "text-emerald-700", red: "text-red-700", orange: "text-orange-700", stone: "text-stone-900" }[tone];
+  const c = { green: "text-emerald-700", red: "text-red-700", orange: "text-amber-700", stone: "text-stone-900" }[tone];
   return (
     <div className="rounded-lg border border-stone-200 bg-white p-2.5" title={hint}>
       <div className={cx("text-xl font-semibold tabular-nums", c)}>{value}</div>

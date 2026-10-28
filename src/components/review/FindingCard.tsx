@@ -63,15 +63,15 @@ export function FindingCard({
       id={f.id}
       data-tour={tour ? "finding" : undefined}
       className={cx(
-        "scroll-mt-24 rounded-xl border bg-white transition-shadow",
-        open ? "border-stone-300 shadow-lift" : "border-stone-200/80 shadow-soft hover:border-stone-300",
+        "scroll-mt-24 border-b border-stone-200 transition-colors duration-150",
+        open ? "bg-stone-50" : "hover:bg-stone-50",
         resolved && !open && "opacity-70",
       )}
     >
-      <button className="flex w-full items-start gap-3 px-4 py-3 text-left" onClick={onToggle} aria-expanded={open} aria-controls={`${f.id}-body`}>
+      <button className="flex w-full items-start gap-2.5 px-1 py-2.5 text-left" onClick={onToggle} aria-expanded={open} aria-controls={`${f.id}-body`}>
         <span className={cx("mt-1.5 h-2 w-2 shrink-0 rounded-full", resolved ? "bg-emerald-500" : SEVERITY_DOT[f.severity])} aria-hidden />
         <span className="min-w-0 flex-1">
-          <span className={cx("block text-sm font-medium text-stone-950", resolved && "text-stone-600")}>{f.title}</span>
+          <span className={cx("block text-[13px] font-medium text-stone-950", resolved && "text-stone-500")}>{f.title}</span>
           <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-stone-500">
             <span className="sr-only">Severity {f.severity}.</span>
             {f.juror} · <SourceBadge source={f.source} verification={f.verification} />
@@ -89,14 +89,14 @@ export function FindingCard({
       </button>
 
       {open && (
-        <div id={`${f.id}-body`} className="animate-fade-up space-y-4 border-t border-stone-100 px-4 pb-4 pt-3 text-sm">
+        <div id={`${f.id}-body`} className="animate-fade-up space-y-3 px-1 pb-4 pl-[22px] text-[13px]">
           {f.offendingText && (
-            <blockquote className={cx("rounded-lg border-l-[3px] border-orange-500 bg-orange-50/70 px-3 py-2 text-[15px] leading-relaxed text-stone-900", !textPresent && !resolved && !f.location && "line-through decoration-stone-400")}>
+            <blockquote className={cx("border-l-2 border-stone-900 pl-3 text-[14px] leading-relaxed text-stone-900", !textPresent && !resolved && !f.location && "line-through decoration-stone-400")}>
               “{f.offendingText}”
             </blockquote>
           )}
           <section>
-            <h4 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1.5">
+            <h4 className="flex items-center gap-1.5 text-[11px] font-medium text-stone-500 mb-1.5">
               <ScrollText size={12} /> Evidence
             </h4>
             <ul className="space-y-1.5">
@@ -108,7 +108,7 @@ export function FindingCard({
           </section>
 
           <section>
-            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1">Explanation</h4>
+            <h4 className="text-[11px] font-medium text-stone-500 mb-1">Explanation</h4>
             <p className="text-stone-700">{f.explanation}</p>
             {f.whyItMatters && <p className="mt-1 text-stone-600"><span className="font-medium text-stone-800">Why it matters: </span>{f.whyItMatters}</p>}
           </section>
@@ -120,7 +120,7 @@ export function FindingCard({
           )}
 
           <section>
-            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1">Suggested fix</h4>
+            <h4 className="text-[11px] font-medium text-stone-500 mb-1">Suggested fix</h4>
             <p className="text-stone-700">{f.suggestedFix}</p>
             {f.replacement !== undefined && f.offendingText && !editing && (
               <div className="mt-1.5 rounded border border-stone-200 bg-stone-50 px-3 py-2 text-sm">
@@ -160,7 +160,7 @@ export function FindingCard({
                 <ShieldAlert size={13} /> Escalate
               </Button>
               {f.category === "guideline_conflict" && (
-                <Link href="/guidelines" className="text-xs self-center text-orange-700 hover:underline">View conflict →</Link>
+                <Link href="/guidelines" className="text-xs self-center text-accent-700 hover:underline">View conflict →</Link>
               )}
             </div>
           )}
@@ -174,11 +174,11 @@ export function FindingCard({
           {!readOnly && (
             <section className="border-t border-stone-100 pt-2">
               <button
-                className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-500 hover:text-stone-900"
+                className="flex items-center gap-1.5 text-[11px] font-medium text-stone-500 hover:text-stone-900"
                 aria-expanded={discussOpen}
                 onClick={() => setDiscussOpen(!discussOpen)}
               >
-                <MessageSquare size={12} /> Discussion {thread.length > 0 && <span className="rounded-full bg-orange-600 px-1.5 text-[10px] text-white normal-case">{thread.length}</span>}
+                <MessageSquare size={12} /> Discussion {thread.length > 0 && <span className="rounded-full bg-amber-600 px-1.5 text-[10px] text-white normal-case">{thread.length}</span>}
               </button>
               {discussOpen && (
                 <div className="mt-2">
@@ -189,7 +189,7 @@ export function FindingCard({
           )}
           {f.history.length > 1 && (
             <section className="border-t border-stone-100 pt-2">
-              <h4 className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 mb-1">Decision history</h4>
+              <h4 className="text-[11px] font-medium text-stone-500 mb-1">Decision history</h4>
               <ul className="space-y-0.5 text-xs text-stone-600">
                 {f.history.map((h, i) => (
                   <li key={i}>
@@ -208,7 +208,7 @@ export function FindingCard({
         </div>
       )}
       {!open && resolved && last && (
-        <div className="-mt-1 pb-3 pl-9 pr-4 text-xs capitalize text-stone-500">
+        <div className="-mt-1.5 pb-2.5 pl-[22px] text-xs capitalize text-stone-500">
           {last.action} by {last.by}{last.reason ? ` — ${last.reason}` : ""}
         </div>
       )}
@@ -280,7 +280,7 @@ function EvidenceRow({ e, brand }: { e: EvidenceRef; brand: Brand }) {
     const rule = brand.rules.find((r) => r.id === e.id);
     const changed = rule && rule.text !== e.excerpt;
     return (
-      <li className={cx("rounded border px-3 py-2", e.verified ? "border-stone-200 bg-stone-50" : "border-amber-300 bg-amber-50")}>
+      <li className={cx("rounded-md border px-2.5 py-2", e.verified ? "border-stone-200 bg-white" : "border-amber-300 bg-amber-50")}>
         <div className="flex items-center gap-1.5 text-xs">
           <span className="font-semibold text-stone-900">Guideline {e.id}</span>
           {rule && <span className="text-stone-500">{rule.title} · v{rule.version}</span>}
@@ -296,7 +296,7 @@ function EvidenceRow({ e, brand }: { e: EvidenceRef; brand: Brand }) {
     const fact = brand.facts.find((x) => x.id === e.id);
     const st = fact ? factState(fact) : null;
     return (
-      <li className={cx("rounded border px-3 py-2", e.verified ? "border-stone-200 bg-stone-50" : "border-amber-300 bg-amber-50")}>
+      <li className={cx("rounded-md border px-2.5 py-2", e.verified ? "border-stone-200 bg-white" : "border-amber-300 bg-amber-50")}>
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
           <span className="font-semibold text-stone-900">Approved fact {e.id}</span>
           {st && <Badge tone={st === "active" ? "green" : st === "expired" ? "red" : "amber"}>{st}</Badge>}

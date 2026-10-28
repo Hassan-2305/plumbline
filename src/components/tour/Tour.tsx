@@ -59,7 +59,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
       id = createFromExample("A");
       safeSet(ss, DEMO_KEY, id);
     }
-    return `/review/${id}`;
+    return `/content/${id}`;
   }, [state]);
 
   const close = useCallback((completed: boolean) => {
@@ -206,16 +206,15 @@ export function TourProvider({ children }: { children: ReactNode }) {
           {rect ? (
             <div
               aria-hidden
-              className="pointer-events-none fixed rounded-xl ring-2 ring-orange-500 transition-all duration-200"
+              className="pointer-events-none fixed rounded-lg ring-2 ring-accent-500 transition-all duration-200"
               style={{
                 top: rect.top - pad,
                 left: rect.left - pad,
                 width: rect.width + pad * 2,
                 height: rect.height + pad * 2,
-                boxShadow: "0 0 0 9999px rgb(28 25 23 / 0.55)",
+                boxShadow: "0 0 0 9999px rgb(10 10 10 / 0.45)",
               }}
             >
-              <span className="beacon absolute -right-1.5 -top-1.5 h-3 w-3 rounded-full bg-orange-600" />
             </div>
           ) : (
             <div aria-hidden className="fixed inset-0 bg-stone-950/55 backdrop-blur-[1px]" />
@@ -229,15 +228,15 @@ export function TourProvider({ children }: { children: ReactNode }) {
             aria-modal="true"
             aria-labelledby="tour-title"
             aria-describedby="tour-body"
-            className="animate-fade-up fixed rounded-2xl border border-stone-200 bg-white p-5 shadow-lift"
+            className="animate-fade-up fixed rounded-xl border border-stone-200 bg-white p-5 shadow-lift"
             style={cardStyle}
           >
             <div className="flex items-start gap-3">
               <div className="flex-1">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-orange-700">
+                <div className="text-[11px] font-medium text-stone-500">
                   Step {index! + 1} of {total}
                 </div>
-                <h2 id="tour-title" className="mt-1 font-serif text-2xl leading-tight text-stone-950">
+                <h2 id="tour-title" className="mt-0.5 text-[15px] font-semibold leading-snug text-stone-950">
                   {step.title}
                 </h2>
               </div>

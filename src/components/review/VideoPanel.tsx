@@ -80,8 +80,8 @@ export function VideoPanel({ meta, brand, onChange }: { meta: ContentMeta; brand
                   return (
                     <li key={f.t} className="text-center">
                       {/* eslint-disable-next-line @next/next/no-img-element -- local data URL frame */}
-                      <img src={f.thumb} alt={`Frame at ${fmtTime(f.t)}`} className={cx("aspect-video w-full rounded object-cover ring-2", off ? "ring-orange-500" : "ring-transparent")} />
-                      <span className={cx("text-[10px]", off ? "font-medium text-orange-700" : "text-stone-500")}>{fmtTime(f.t)}</span>
+                      <img src={f.thumb} alt={`Frame at ${fmtTime(f.t)}`} className={cx("aspect-video w-full rounded object-cover ring-2", off ? "ring-amber-500" : "ring-transparent")} />
+                      <span className={cx("text-[10px]", off ? "font-medium text-amber-700" : "text-stone-500")}>{fmtTime(f.t)}</span>
                     </li>
                   );
                 })}

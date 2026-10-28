@@ -17,10 +17,11 @@ const displaySerif = Instrument_Serif({
   variable: "--font-display-serif",
   subsets: ["latin"],
   weight: "400",
+  style: ["normal", "italic"],
 });
 
 export const metadata: Metadata = {
-  title: "Plumbline Jury — evidence-backed brand review",
+  title: "Plumbline Jury",
   description:
     "Every objection needs evidence. Every fix needs human consent. Every approval leaves a history.",
 };
@@ -28,7 +29,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${displaySerif.variable} h-full antialiased`}>
-      <body className="min-h-full bg-stone-50 text-stone-900">
+      <body className="min-h-full bg-background text-stone-900">
         <AppShell>{children}</AppShell>
       </body>
     </html>

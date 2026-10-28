@@ -10,7 +10,7 @@ import type { Comment } from "@/lib/types";
 function renderText(text: string) {
   return text.split(/(@(?:creator|manager|reviewer)\b)/gi).map((part, i) =>
     /^@(creator|manager|reviewer)$/i.test(part) ? (
-      <span key={i} className="rounded bg-orange-100 px-1 font-medium text-orange-800">{part}</span>
+      <span key={i} className="rounded bg-amber-100 px-1 font-medium text-amber-800">{part}</span>
     ) : (
       <span key={i}>{part}</span>
     ),
@@ -36,11 +36,11 @@ export function CommentThread({ itemId, comments, findingId, placeholder }: { it
         {visible.map((c) => {
           const mine = c.mentions.includes(state.role) && !c.resolved;
           return (
-            <li key={c.id} className={cx("rounded-lg border px-3 py-2", c.resolved ? "border-stone-100 bg-stone-50 opacity-70" : mine ? "border-orange-200 bg-orange-50/50" : "border-stone-200 bg-white")}>
+            <li key={c.id} className={cx("rounded-lg border px-3 py-2", c.resolved ? "border-stone-100 bg-stone-50 opacity-70" : mine ? "border-amber-200 bg-amber-50/50" : "border-stone-200 bg-white")}>
               <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-stone-500">
                 <span className="font-medium text-stone-800">{c.by}</span>
                 <span>· {fmtDate(c.at)}</span>
-                {mine && <Badge tone="orange">Mentions you</Badge>}
+                {mine && <Badge tone="amber">Mentions you</Badge>}
                 {c.resolved && <Badge>Resolved</Badge>}
                 <button
                   className="ml-auto inline-flex items-center gap-1 rounded px-1 text-stone-500 hover:bg-stone-100 hover:text-stone-900"

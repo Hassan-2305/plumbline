@@ -31,11 +31,12 @@ import { coordinate, signature } from "./engine/coordinator";
 import { applyLocalFix } from "./engine/diff";
 import { numberTokens } from "./engine/text";
 import { can, isRole, roleMeta } from "./roles";
+import { LIFECYCLE } from "./types";
 
 // Prototype persistence in localStorage. Not secure, not multi-user, not tamper-proof.
 
 const KEY = "plumbline-jury:v1";
-const SCHEMA = 4;
+const SCHEMA = 5;
 
 export function initialState(): AppState {
   const brand = structuredClone(NORTHSTAR);
@@ -57,7 +58,7 @@ const listeners = new Set<() => void>();
 
 function isValid(s: unknown): s is AppState {
   const x = s as AppState;
-  return !!x && [1, 2, 3, SCHEMA].includes(x.schema) && Array.isArray(x.brands) && x.brands.length > 0 && Array.isArray(x.items) && Array.isArray(x.conflicts);
+  return !!x && [1, 2, 3, 4, SCHEMA].includes(x.schema) && Array.isArray(x.brands) && x.brands.length > 0 && Array.isArray(x.items) && Array.isArray(x.conflicts);
 }
 
 /** v1 → v2: change requests and changelog. v2 → v3: rule roles, brand-scoped conflicts. */
@@ -68,7 +69,21 @@ function sanitize(s: AppState): AppState {
     ...s,
     role,
     aiLedger: Array.isArray(s.aiLedger) ? s.aiLedger : [],
-    items: s.items.map((i) => (Array.isArray(i.comments) ? i : { ...i, comments: [] })),
+    items: s.items.map((i) => ({
+      ...i,
+      comments: Array.isArray(i.comments) ? i.comments : [],
+      // v4 → v5 lifecycle: "under_review" became "ready_for_approval"; reviewed drafts are "in_review".
+      status:
+        (i.status as string) === "under_review"
+          ? "ready_for_approval"
+          : i.status === "draft" && i.runs.length > 0
+            ? "in_review"
+            : LIFECYCLE.includes(i.status)
+              ? i.status
+              : "draft",
+      createdBy: i.createdBy ?? "creator",
+      assignee: i.assignee ?? (i.status === "approved" || i.status === "changes_requested" ? "reviewer" : "manager"),
+    })),
     brands: s.brands.map((b) => ({ ...b, changes: b.changes ?? [], changelog: b.changelog ?? [] })),
   };
 }
@@ -292,6 +307,8 @@ export function createItem(input: { title: string; contentType: ContentType; tex
   const s = getState();
   const item: ContentItem = {
     id,
+    createdBy: s.role,
+    assignee: "manager",
     title: input.title || "Untitled draft",
     brandId: s.activeBrandId,
     contentType: input.contentType,
@@ -313,11 +330,12 @@ export function createItem(input: { title: string; contentType: ContentType; tex
 }
 
 /** Creates an item from a demo scenario and runs deterministic checks plus labelled seeded jury results. */
-export function createFromExample(exampleId: string) {
+/** `meta` lets callers attach media analysed in the browser (e.g. the demo product image). */
+export function createFromExample(exampleId: string, meta?: Partial<ContentMeta>) {
   const ex = EXAMPLES.find((e) => e.id === exampleId) ?? EXAMPLES[0];
   // Demo scenarios are written for the Northstar demo brand.
   if (getState().brands.some((b) => b.id === NORTHSTAR.id)) setActiveBrand(NORTHSTAR.id);
-  const id = createItem({ title: `Demo ${ex.id}: ${ex.title}`, contentType: ex.contentType, text: ex.text, meta: { ...ex.meta } });
+  const id = createItem({ title: `Demo ${ex.id}: ${ex.title}`, contentType: ex.contentType, text: ex.text, meta: { ...ex.meta, ...meta } });
   commitReview(id, { aiFindings: ex.seededJury, mode: "seeded", aiStatus: "seeded" });
   return id;
 }
@@ -326,8 +344,8 @@ export function updateDraft(id: string, patch: Partial<Pick<ContentItem, "title"
   updateItem(id, (it, s) => {
     const next = { ...it, ...patch, meta: patch.meta ? { ...it.meta, ...patch.meta } : it.meta };
     const textChanged = patch.text !== undefined && patch.text !== it.text;
-    if (textChanged && (it.status === "approved" || it.status === "under_review")) {
-      next.status = "draft";
+    if (textChanged && (it.status === "approved" || it.status === "ready_for_approval")) {
+      next.status = "in_review";
       next.events = [...it.events, { at: now(), by: actor(s), text: `Text edited after ${it.status === "approved" ? "approval — approval no longer applies to the current text" : "submission — withdrawn from review"}.` }];
     }
     return next;
@@ -388,7 +406,7 @@ export function commitReview(
       findings: [...kept, ...fresh],
       matchedFacts: det.matchedFacts,
       runs: [...it.runs, run],
-      status: it.status === "approved" ? "approved" : it.status === "under_review" ? "under_review" : it.status,
+      status: it.status === "draft" ? "in_review" : it.status,
       events: [
         ...it.events,
         {
@@ -428,7 +446,7 @@ export function acceptFix(id: string, findingId: string, replacementOverride?: s
     return {
       ...base,
       text: nextText,
-      status: it.status === "approved" || it.status === "under_review" ? "draft" : it.status,
+      status: it.status === "approved" || it.status === "ready_for_approval" ? "in_review" : it.status,
       versions: [...base.versions, { id: uid("v"), number: lastNum + 1, text: nextText, createdAt: at, label: `${action === "edited" ? "Edited fix" : "Accepted fix"} ${f.id}` }],
       findings: base.findings.map((x) =>
         x.id === findingId
@@ -486,7 +504,7 @@ export function submitForApproval(id: string) {
     const base = snapshotVersion(it, "Submitted draft");
     return {
       ...base,
-      status: "under_review",
+      status: "ready_for_approval",
       events: [...base.events, { at: now(), by: actor(s), text: `Submitted v${base.versions[base.versions.length - 1].number} for approval.` }],
     };
   });
@@ -808,4 +826,12 @@ export function saveImpact(target: { conflictId?: string; changeId?: string }, i
 
 export function addFeedback(entry: Omit<FeedbackEntry, "id" | "at" | "role">) {
   set((s) => ({ ...s, feedback: [{ ...entry, id: uid("fb"), at: now(), role: s.role }, ...(s.feedback ?? [])] }));
+}
+
+export function setAssignee(itemId: string, assignee: Role) {
+  updateItem(itemId, (it, s) => ({
+    ...it,
+    assignee,
+    events: [...it.events, { at: now(), by: actor(s), text: `Assigned to ${roleMeta(assignee).person}.` }],
+  }));
 }

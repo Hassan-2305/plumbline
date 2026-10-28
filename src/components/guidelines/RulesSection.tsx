@@ -87,7 +87,7 @@ function RuleRow({ r, pending, role }: { r: Rule; pending: boolean; role?: strin
         <div className="flex shrink-0 items-center gap-1.5">
           {role && <Badge tone="outline" className="hidden sm:inline-flex">Cited by {role.toLowerCase()} checks</Badge>}
           {pending && <Badge tone="amber">Edit pending</Badge>}
-          <Badge tone={r.version > 1 ? "orange" : "outline"}>v{r.version}</Badge>
+          <Badge tone={r.version > 1 ? "accent" : "outline"}>v{r.version}</Badge>
           {!editing && !pending && (
             <button aria-label={`Propose edit to ${r.id}`} className="text-stone-400 hover:text-stone-900" onClick={() => setEditing(true)}>
               <Pencil size={14} />
@@ -155,7 +155,7 @@ export function RulesSection({ state }: { state: AppState }) {
       {pendingNew > 0 && <p className="text-xs text-amber-800">{pendingNew} new rule proposal(s) are waiting for a reviewer under Conflicts &amp; proposals.</p>}
       {brand.rules.length === 0 ? (
         <Card className="p-8 text-center">
-          <p className="font-serif text-2xl text-stone-950">No rules yet</p>
+          <p className=" text-2xl text-stone-950">No rules yet</p>
           <p className="mx-auto mt-1 max-w-md text-sm text-stone-600">
             Import your brand book or propose rules one at a time. The built-in checks still run, but findings won’t cite a brand rule until one exists.
           </p>

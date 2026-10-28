@@ -5,7 +5,7 @@ Plumbline Jury is a Next.js (App Router) application. Almost everything runs in 
 ```mermaid
 flowchart LR
   subgraph Browser
-    UI[React UI<br/>review · guidelines · insights · settings]
+    UI[React UI<br/>home · content · reviews · approvals · guidelines · insights]
     Store[(localStorage store<br/>src/lib/store.ts)]
     Det[Rule-based jury<br/>src/lib/engine/deterministic.ts]
     Media[Image / video / document readers<br/>canvas · pdf.js · mammoth]
@@ -78,5 +78,9 @@ No datasets were used. All demo data (Northstar Nutrition, Aurora Coffee, facts,
 | `src/lib/image`, `src/lib/video`, `src/lib/import` | Media and document readers |
 | `src/lib/store.ts` | State, persistence, migrations and permission-checked actions |
 | `src/lib/roles.ts` | Roles and permission matrix |
-| `src/components/*` | UI, including the guided tour |
+| `src/components/AppShell.tsx`, `nav.ts`, `CommandPalette.tsx` | Navigation, workspace switcher, Ctrl K search, profile menu |
+| `src/components/review/*` | Review workspace: `DecisionBar` (lifecycle and decisions), `Preview` (rendered content with highlights), `ReviewPanel` (verdict, findings, discussion, history), `EditorPanel` |
+| `src/components/content/*` | Content lists shared by Home, Content, Reviews and Approvals |
+| `src/components/*` | Other UI, including the guided tour |
+| `src/lib/activity.ts` | Workspace activity feed |
 | `tests/*` | Vitest unit tests |

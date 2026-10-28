@@ -104,7 +104,7 @@ export function FactsSection({ state }: { state: AppState }) {
       )}
       <Card className="overflow-x-auto">
         <table className="w-full text-sm min-w-[820px]">
-          <thead className="bg-stone-50 text-left text-[11px] uppercase tracking-wider text-stone-500">
+          <thead className="bg-stone-50 text-left text-[11px]r text-stone-500">
             <tr>
               <th className="px-4 py-2 font-semibold">ID</th>
               <th className="px-4 py-2 font-semibold">Approved statement</th>

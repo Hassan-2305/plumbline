@@ -60,8 +60,8 @@ export function ChangeQueue({ state }: { state: AppState }) {
   if (!pending.length) return null;
   return (
     <section id="queue">
-      <SectionTitle aside={<Badge tone="orange">{pending.length} pending</Badge>}>Proposed guideline changes</SectionTitle>
-      <Card className="divide-y divide-stone-100 border-orange-300">
+      <SectionTitle aside={<Badge tone="amber">{pending.length} pending</Badge>}>Proposed guideline changes</SectionTitle>
+      <Card className="divide-y divide-stone-100 border-amber-300">
         {pending.map((c) => (
           <ChangeRow key={c.id} c={c} state={state} />
         ))}

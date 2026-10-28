@@ -122,9 +122,9 @@ export function ImportPanel({ onClose }: { onClose: () => void }) {
   return (
     <Card className="p-5">
       <div className="flex items-start gap-3">
-        <IconChip tone="orange"><FileUp size={16} /></IconChip>
+        <IconChip tone="amber"><FileUp size={16} /></IconChip>
         <div className="flex-1">
-          <h3 className="font-serif text-xl text-stone-950">Import a brand book</h3>
+          <h3 className=" text-xl text-stone-950">Import a brand book</h3>
           <p className="text-sm text-stone-600">
             PDF, .txt or .md. Text is read in your browser. Detected rules become <strong>proposals</strong> that a reviewer approves. Nothing is added automatically.
           </p>
@@ -140,7 +140,7 @@ export function ImportPanel({ onClose }: { onClose: () => void }) {
 
       {!doc && (
         <div
-          className="mt-4 rounded-xl border border-dashed border-stone-300 bg-stone-50/60 p-6 text-center"
+          className="mt-4 rounded-lg border border-dashed border-stone-300 bg-stone-50/60 p-6 text-center"
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault();
@@ -193,7 +193,7 @@ export function ImportPanel({ onClose }: { onClose: () => void }) {
             </p>
           )}
 
-          <ul className="max-h-[420px] divide-y divide-stone-100 overflow-y-auto rounded-xl border border-stone-200">
+          <ul className="max-h-[420px] divide-y divide-stone-100 overflow-y-auto rounded-lg border border-stone-200">
             {cands.length === 0 && <li className="p-4 text-sm text-stone-600">No rule-like sentences found. Try “Suggest more with AI”, or add rules by hand.</li>}
             {cands.map((c) => (
               <li key={c.id} className={cx("flex gap-3 px-3 py-2.5", !picked[c.id] && "opacity-60")}>

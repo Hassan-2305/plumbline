@@ -253,11 +253,10 @@ export const CONTENT_TYPES: ContentType[] = [
   "Document",
 ];
 
-export type ContentStatus =
-  | "draft"
-  | "under_review"
-  | "changes_requested"
-  | "approved";
+/** Draft → In Review → Changes Requested → Ready for Approval → Approved */
+export type ContentStatus = "draft" | "in_review" | "changes_requested" | "ready_for_approval" | "approved";
+
+export const LIFECYCLE: ContentStatus[] = ["draft", "in_review", "changes_requested", "ready_for_approval", "approved"];
 
 export interface Version {
   id: string;
@@ -418,6 +417,9 @@ export interface ContentItem {
   seeded: boolean;
   /** Confidential items never leave the browser: AI review is blocked. */
   confidential?: boolean;
+  /** Who created the item and who is assigned to decide it (simulated personas). */
+  createdBy?: Role;
+  assignee?: Role;
   comments?: Comment[];
   createdAt: string;
   updatedAt: string;

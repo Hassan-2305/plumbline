@@ -35,7 +35,7 @@ Rule extraction and conflict analysis are covered by the same mock: invented rul
 ## Manual end-to-end checks (browser)
 
 - First visit: the demo loads, the guided tour opens, all 11 tour steps find their targets on desktop and mobile.
-- Try Demo → click a highlight → evidence → Accept Fix → Dismiss with reason → re-run → submit (creator) → approve (manager or reviewer).
+- Home → Open a reviewed sample → select an underlined phrase → evidence → Accept fix → Dismiss with reason → Re-run review → Submit for approval (creator) → Approve (manager or reviewer) from the decision bar.
 - A manager can't approve with open high-risk findings; a reviewer can override with a reason, and the override is recorded.
 - Comments with @mentions appear under "Needs your attention" for the mentioned role.
 - A confidential item sends nothing to AI. Redaction preview and ledger entries match.
@@ -43,7 +43,7 @@ Rule extraction and conflict analysis are covered by the same mock: invented rul
 - A brand-book PDF imports into a new empty brand; approving the proposals creates the rules and detects the conflict automatically.
 - Video: frames are sampled, off-palette frames flagged, captions checked for spoken claims.
 - Corrupted localStorage restores the demo with a notice. Data from older schemas is migrated.
-- No horizontal overflow at 375 px on any page.
+- No horizontal overflow at 375 px on any of the 14 pages; the navigation becomes a drawer.
 
 ## Reliability fixes made during development
 

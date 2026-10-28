@@ -43,7 +43,7 @@ export function ImageFacts({ img, brand }: { img: ImageAnalysis; brand: Brand })
                 <span className="h-3.5 w-3.5 rounded-sm border border-stone-300" style={{ background: c.hex }} />
                 <span className="font-mono">{c.hex}</span>
                 <span className="text-stone-500">{Math.round(c.share * 100)}%</span>
-                <span className={cx("ml-auto", ok ? "text-emerald-700" : "text-orange-700")}>
+                <span className={cx("ml-auto", ok ? "text-emerald-700" : "text-amber-700")}>
                   {ok ? "≈" : "≠"} {near.name} (ΔE {near.distance.toFixed(0)})
                 </span>
               </li>

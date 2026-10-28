@@ -23,7 +23,7 @@ export function brandMark(b: Brand) {
 export function BrandMark({ brand, size = 28 }: { brand: Brand; size?: number }) {
   const m = brandMark(brand);
   return (
-    <span className="flex shrink-0 items-center justify-center rounded-md text-[11px] font-semibold text-white" style={{ width: size, height: size, background: m.bg }} aria-hidden>
+    <span className="flex shrink-0 items-center justify-center rounded-lg text-[12px] font-semibold text-white" style={{ width: size, height: size, background: m.bg }} aria-hidden>
       {m.letter}
     </span>
   );
@@ -57,17 +57,17 @@ export function CreateBrandModal({ open, onClose }: { open: boolean; onClose: ()
     <Modal
       open={open}
       onClose={onClose}
-      title="Create a brand"
+      title="New workspace"
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" disabled={!canCreate} onClick={submit}>Create brand</Button>
+          <Button variant="primary" disabled={!canCreate} onClick={submit}>Create workspace</Button>
         </>
       }
     >
       <div className="space-y-4">
         <div>
-          <Label htmlFor="brand-name">Brand name</Label>
+          <Label htmlFor="brand-name">Brand name (workspace)</Label>
           <input id="brand-name" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Aurora Coffee" autoFocus />
         </div>
         <div>
@@ -98,7 +98,7 @@ export function CreateBrandModal({ open, onClose }: { open: boolean; onClose: ()
           <div className="mb-1.5 flex items-center justify-between">
             <span className="text-xs font-medium text-stone-700">Approved colours</span>
             {palette.length < 6 && (
-              <button className="text-xs text-orange-700 hover:underline" onClick={() => setPalette([...palette, { name: "", hex: "#" }])}>
+              <button className="text-xs text-accent-700 hover:underline" onClick={() => setPalette([...palette, { name: "", hex: "#" }])}>
                 + Add colour
               </button>
             )}
@@ -128,6 +128,7 @@ export function CreateBrandModal({ open, onClose }: { open: boolean; onClose: ()
   );
 }
 
+/** Workspace switcher: each brand is a workspace with its own rules, facts and content. */
 export function BrandSwitcher() {
   const state = useAppState();
   const [open, setOpen] = useState(false);
@@ -152,20 +153,21 @@ export function BrandSwitcher() {
       <button
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={`Brand: ${brand.name}. Switch brand`}
+        aria-label={`Workspace: ${brand.name}. Switch workspace`}
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2.5 rounded-lg border border-stone-200/80 bg-white px-3 py-2 text-left shadow-soft hover:border-stone-300"
+        className="flex w-full items-center gap-3 rounded-xl border border-stone-200/80 bg-white px-3 py-2.5 text-left shadow-soft transition-colors hover:border-stone-300"
       >
-        <BrandMark brand={brand} />
+        <BrandMark brand={brand} size={30} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-stone-900">{brand.name}</span>
-          <span className={cx("block text-[11px]", brand.fictional ? "text-orange-700" : "text-stone-500")}>{brand.fictional ? "Fictional demo brand" : `${brand.rules.length} rules`}</span>
+          <span className="block truncate text-[14px] font-medium text-stone-900">{brand.name}</span>
+          <span className={cx("block text-xs", brand.fictional ? "text-accent-700" : "text-stone-500")}>{brand.fictional ? "Fictional demo brand" : `${brand.rules.length} rules`}</span>
         </span>
         <ChevronsUpDown size={14} className="text-stone-400" />
       </button>
       {open && (
-        <div className="animate-fade-up absolute left-0 right-0 top-full z-40 mt-1.5 rounded-xl border border-stone-200 bg-white p-1 shadow-lift">
-          <ul role="listbox" aria-label="Brands">
+        <div className="animate-fade-up absolute left-0 right-0 top-full z-40 mt-1 rounded-xl border border-stone-200 bg-white p-1 shadow-lift">
+          <div className="px-2 pb-1 pt-1.5 text-[11px] text-stone-500">Workspaces</div>
+          <ul role="listbox" aria-label="Workspaces">
             {state.brands.map((b) => (
               <li key={b.id} role="option" aria-selected={b.id === brand.id}>
                 <button
@@ -173,11 +175,11 @@ export function BrandSwitcher() {
                     setActiveBrand(b.id);
                     setOpen(false);
                   }}
-                  className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-stone-100"
+                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[13px] hover:bg-stone-100"
                 >
-                  <BrandMark brand={b} size={22} />
+                  <BrandMark brand={b} size={18} />
                   <span className="flex-1 truncate">{b.name}</span>
-                  {b.id === brand.id && <Check size={14} className="text-orange-600" />}
+                  {b.id === brand.id && <Check size={13} className="text-accent-600" />}
                 </button>
               </li>
             ))}
@@ -187,9 +189,9 @@ export function BrandSwitcher() {
               setOpen(false);
               setCreating(true);
             }}
-            className="mt-1 flex w-full items-center gap-2 rounded-lg border-t border-stone-100 px-2.5 py-2 text-left text-sm text-stone-700 hover:bg-stone-100"
+            className="mt-1 flex w-full items-center gap-2 rounded border-t border-stone-100 px-2 py-1.5 text-left text-[13px] text-stone-700 hover:bg-stone-100"
           >
-            <Plus size={14} /> New brand…
+            <Plus size={13} /> New workspace…
           </button>
         </div>
       )}

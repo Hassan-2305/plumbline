@@ -126,7 +126,7 @@ const DATA: {
   {
     title: "Retail shelf ad",
     type: "Ad copy",
-    status: "under_review",
+    status: "ready_for_approval",
     date: "2026-10-19T16:20:00.000Z",
     original: "Northstar Daily Protein. The ultimate miracle formula, made from pea and brown rice protein.",
     text: "Northstar Daily Protein. The ultimate plant-based formula, made from pea and brown rice protein.",

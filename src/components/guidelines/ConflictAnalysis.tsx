@@ -109,11 +109,11 @@ export function ConflictAnalysis({ state }: { state: AppState }) {
 
       {lexical && (
         <div className="mt-4 space-y-2">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-stone-500">Deterministic (opposing terms)</div>
+          <div className="text-[11px] font-medium text-stone-500">Deterministic (opposing terms)</div>
           {lexical.length === 0 && <p className="text-sm text-stone-600">No opposing terms found. This check is lexical only and is not a full semantic review.</p>}
           {lexical.map((r, i) => (
-            <div key={i} className="rounded border border-orange-200 bg-orange-50 p-3 text-sm">
-              <div className="font-medium text-orange-950">
+            <div key={i} className="rounded border border-amber-200 bg-amber-50 p-3 text-sm">
+              <div className="font-medium text-amber-950">
                 {r.ruleIds[0]} ↔ {r.ruleIds[1]} · {r.dimension}
               </div>
               <p className="text-xs text-stone-700 mt-1">{r.ruleIds[0]}: “{lookup(r.ruleIds[0])}”</p>
@@ -130,7 +130,7 @@ export function ConflictAnalysis({ state }: { state: AppState }) {
       {aiError && <p className="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">AI analysis failed: {aiError} No AI results were recorded.</p>}
       {aiResult && (
         <div className="mt-4 space-y-2">
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+          <div className="flex items-center gap-2 text-[11px] font-medium text-stone-500">
             AI-assisted ({aiResult.model}) <Badge tone="outline">Proposals only</Badge>
           </div>
           {aiResult.dropped > 0 && <p className="text-[11px] text-stone-500">{aiResult.dropped} result(s) discarded for citing rule IDs that don’t exist or being incomplete.</p>}

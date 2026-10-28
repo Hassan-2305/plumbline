@@ -36,8 +36,13 @@ export function can(role: Role, action: Action) {
   return MATRIX[action].includes(role);
 }
 
+/** Unknown or legacy roles (e.g. "writer" from older saved data) fall back to Creator. */
 export function roleMeta(role: Role) {
-  return ROLES.find((r) => r.id === role)!;
+  return ROLES.find((r) => r.id === role) ?? ROLES[0];
+}
+
+export function isRole(value: unknown): value is Role {
+  return ROLES.some((r) => r.id === value);
 }
 
 /** All roles allowed to perform an action, for "who can do this" hints. */

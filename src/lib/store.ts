@@ -30,7 +30,7 @@ import { runDeterministic } from "./engine/deterministic";
 import { coordinate, signature } from "./engine/coordinator";
 import { applyLocalFix } from "./engine/diff";
 import { numberTokens } from "./engine/text";
-import { can, roleMeta } from "./roles";
+import { can, isRole, roleMeta } from "./roles";
 
 // Prototype persistence in localStorage. Not secure, not multi-user, not tamper-proof.
 
@@ -61,6 +61,18 @@ function isValid(s: unknown): s is AppState {
 }
 
 /** v1 → v2: change requests and changelog. v2 → v3: rule roles, brand-scoped conflicts. */
+/** Repairs fields that may be missing or stale in saved data, whatever its schema. */
+function sanitize(s: AppState): AppState {
+  const role: Role = isRole(s.role) ? s.role : "creator";
+  return {
+    ...s,
+    role,
+    aiLedger: Array.isArray(s.aiLedger) ? s.aiLedger : [],
+    items: s.items.map((i) => (Array.isArray(i.comments) ? i : { ...i, comments: [] })),
+    brands: s.brands.map((b) => ({ ...b, changes: b.changes ?? [], changelog: b.changelog ?? [] })),
+  };
+}
+
 function migrate(s: AppState): AppState {
   if (s.schema === SCHEMA) return s;
   return {
@@ -92,7 +104,7 @@ function load(): AppState {
   if (!raw) return initialState();
   try {
     const parsed = JSON.parse(raw);
-    if (isValid(parsed)) return migrate(parsed);
+    if (isValid(parsed)) return sanitize(migrate(parsed));
   } catch {
     // fall through
   }

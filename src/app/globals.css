@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
+/*
+  Plumbline Jury — "Ink & Ember"
+  Warm stone neutrals, near-black ink for primary actions, ember orange
+  reserved for risk and the one key call to action on a screen.
+*/
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafaf9; /* stone-50 canvas */
+  --foreground: #1c1917; /* stone-900 ink */
+  --ember: #ea580c;
 }
 
 @theme inline {
@@ -10,17 +17,62 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-display-serif), Georgia, serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@utility shadow-soft {
+  box-shadow: 0 1px 2px rgb(28 25 23 / 0.04), 0 1px 3px rgb(28 25 23 / 0.04);
+}
+
+@utility shadow-lift {
+  box-shadow: 0 1px 2px rgb(28 25 23 / 0.04), 0 8px 24px -6px rgb(28 25 23 / 0.1);
+}
+
+html {
+  color-scheme: light;
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+}
+
+::selection {
+  background: #fed7aa;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ember);
+  outline-offset: 2px;
+}
+
+/* Tour beacon */
+@keyframes beacon {
+  0% { transform: scale(0.6); opacity: 0.7; }
+  80%, 100% { transform: scale(2.2); opacity: 0; }
+}
+.beacon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: var(--ember);
+  animation: beacon 1.6s ease-out infinite;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.animate-fade-up {
+  animation: fade-up 180ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .beacon::after, .animate-fade-up { animation: none; }
+  * { transition-duration: 0ms !important; }
 }

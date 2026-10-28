@@ -8,6 +8,14 @@ Four jurors (Brand Guardian, Fact-Checker, Risk & Compliance, Accessibility Advo
 
 The demo brand **Northstar Nutrition** and all of its facts and history are **fictional**.
 
+## The three improvements
+
+1. **Comments and a three-role workflow.** Creators, managers and authorised reviewers each have enforced permissions (see the matrix in Settings). Comment threads sit on each piece of content and on each finding, and @mentions appear in the mentioned role's "Needs your attention" list. Managers approve low-risk work; only a reviewer can override high-risk or escalated findings, with a recorded reason.
+2. **Confidential mode with an AI disclosure ledger.** Confidential items never leave the browser. Everything else is redacted before any AI call: emails, phones, card numbers, secrets and brand-defined confidential terms. Users can preview exactly what will be sent, and every external request is logged and exportable.
+3. **Test this change.** Before a guideline change is approved, every version of every reviewed item is replayed under the old and new rules and scored against real human decisions: noise removed, real issues still caught, real issues lost, and approved content that would now fail.
+
+More detail: [Architecture](docs/ARCHITECTURE.md) · [Responsible design](docs/RESPONSIBLE_DESIGN.md) · [Testing](docs/TESTING.md) · [Contributions](docs/CONTRIBUTIONS.md)
+
 ## Run locally
 
 ```bash
@@ -15,7 +23,7 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
-Other commands: `npm run build`, `npm start`, `npm run lint`, `npx tsc --noEmit`.
+Other commands: `npm test` (42 unit tests), `npm run typecheck`, `npm run lint`, `npm run build`, `npm start`, `npm run demo-assets`.
 
 No database, login or API key is required. State lives in browser `localStorage` (key `plumbline-jury:v1`). Use **Reset Demo** (Overview or Settings) to restore the original state.
 
@@ -58,6 +66,10 @@ Alternatively, run `npx vercel` from this folder and follow the prompts.
 - **Guideline management**: anyone can propose a rule edit, a new rule, or a banned or preferred term with a reason. Only the reviewer role can approve or reject, and the queue shows a word diff for each edit. Approved edits version the rule and keep the old text. New facts start as pending and must be approved before they can support claims; reviewers can re-verify a fact and set a new expiry. Every applied change goes into the brand change log.
 - **AI guideline analysis** (`src/lib/ai/conflicts.ts`, `POST /api/guidelines/analyze`): Gemini looks for conflicts across the current rules plus any pasted text. Results citing rule IDs that don't exist are discarded. A conflict between existing rules can be added to Guideline Intelligence, labelled as an AI proposal.
 - **Image checks** (`src/lib/image/analyze.ts`, browser-only): upload or drop PNG, JPEG, WebP, GIF or SVG files up to 5 MB, or use the bundled demo images (approved logo, stretched logo, off-brand banner). The app reads the file metadata, extracts the dominant colours and compares them with the palette (CIE76 ΔE), and computes a 64-bit perceptual hash (dHash). It flags off-palette images, logo files that don't match the reference (whole-file comparison) and logo files whose proportions differ by more than 3% from the reference (possible stretching). Alt text that is just a file name is flagged. Images are never sent to the AI.
+- **Document review**: import a PDF, Word (.docx), TXT or Markdown file as the content to review (or use the sample sell sheet). Text is extracted in the browser, and findings in multi-page PDFs show their page. Documents over 8,000 characters get rule-based checks only.
+- **Comments, roles and permissions**: see "The three improvements" above.
+- **Confidential mode and AI ledger**: see "The three improvements" above.
+- **Usability feedback**: "Give feedback" in the sidebar records task, completion and ease (1–5) locally; export it from Settings. The test script is in docs/TESTING.md.
 - **Multiple brands**: create a brand from the sidebar switcher or Settings, starting with starter rules, a copy of the current brand's rules, or nothing. Pages, insights, conflicts and new reviews are scoped to the brand in view. Each brand maps its rules to the built-in checks ("check categories"), so findings cite that brand's own rule IDs; a brand without a matching rule still gets the check, just without a citation. Brands you create can be deleted.
 - **Brand-book import** (`src/lib/import/extract.ts`, `src/components/guidelines/ImportPanel.tsx`): PDF, TXT or Markdown, read in the browser with pdf.js. Rule-like sentences, banned phrases ("Never use the phrase …"), preferred terms ("Use … instead of …") and named hex colours are detected by pattern. AI suggestions are optional (`POST /api/guidelines/extract`), and any AI rule whose quote isn't found verbatim in the document is discarded. Everything becomes a proposal for a reviewer. Approving rules re-runs conflict detection, so the sample book's "playful and conversational" vs "strictly formal" clash is caught automatically.
 - **Video review** (`src/lib/video/analyze.ts`, `src/components/review/VideoPanel.tsx`, browser-only): MP4, WebM, Ogg or MOV up to 100 MB. The app reads the metadata and samples up to 12 evenly spaced frames, each compared with the palette (frames that are 40% or more off-palette are flagged with timestamps). WebVTT and SRT captions are parsed and checked for presence, runtime coverage and reading speed (above 20 characters per second). The caption text also goes through every text check, so spoken claims such as "miracle formula" or "clinically proven" are flagged with their caption timestamp.
@@ -73,7 +85,7 @@ Alternatively, run `npx vercel` from this folder and follow the prompts.
 ## Known limitations
 
 - localStorage is prototype persistence. It is not secure, not multi-user and not a tamper-proof audit trail.
-- Roles are simulated, with no authentication. Approval applies only inside this app and cannot stop publication elsewhere.
+- Roles are simulated (Creator, Manager, Reviewer) with no authentication; permissions are enforced in client-side state only. Approval applies only inside this app and cannot stop publication elsewhere.
 - Exact and lexical matching is not semantic verification. A paraphrase may be valid, and an exact match may still mislead in context.
 - The deterministic conflict check only catches opposing terms. AI conflict analysis needs a Gemini key.
 - Image checks are measurements, not understanding. Nothing identifies what an image depicts, finds a logo inside a larger image, or checks logo clear space. Logo comparison works on whole logo files only.
@@ -101,5 +113,4 @@ Alternatively, run `npx vercel` from this folder and follow the prompts.
 | Nithin | Demo brand, seed data, demo images, scenarios, QA, README, video | `src/lib/seed/*`, `public/demo/*`, `README.md`, `scripts/*` |
 
 Shared contracts live in `src/lib/types.ts`. Tell the team before changing them.
-#   p l u m b l i n e  
- 
+# plumbline

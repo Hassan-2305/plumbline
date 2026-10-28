@@ -1,36 +1,105 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Plumbline Jury
 
-## Getting Started
+Evidence-backed brand review for marketing content.
 
-First, run the development server:
+> Every objection needs evidence. Every fix needs human consent. Every approval leaves a history.
+
+Four jurors (Brand Guardian, Fact-Checker, Risk & Compliance, Accessibility Advocate) review drafts against a brand's rules and approved facts. Deterministic checks run first and work offline. Optional Gemini jurors add judgement. Every evidence reference is re-validated against the loaded rules and facts before it is shown. Humans accept, edit, dismiss or escalate each finding, and a simulated reviewer approves versions. Dismissal patterns feed **Guideline Intelligence**, which surfaces confusing or conflicting rules and proposes clarifications for human approval.
+
+The demo brand **Northstar Nutrition** and all of its facts and history are **fictional**.
+
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Other commands: `npm run build`, `npm start`, `npm run lint`, `npx tsc --noEmit`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+No database, login or API key is required. State lives in browser `localStorage` (key `plumbline-jury:v1`). Use **Reset Demo** (Overview or Settings) to restore the original state.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Live AI (optional)
 
-## Learn More
+Create `.env.local` (see `.env.example`):
 
-To learn more about Next.js, take a look at the following resources:
+| Variable | Required | Purpose |
+|---|---|---|
+| `GEMINI_API_KEY` | for live AI | Google AI Studio key. Server-side only. |
+| `GEMINI_MODEL` | no | Defaults to `gemini-2.5-flash`. Use any `generateContent` model your key can access. |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`/settings` and `GET /api/status` report whether the key is set and whether the model exists for the key (checked with a metadata call, which uses no generation quota). Free-tier quotas and model availability change, so check this after deploying.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+All four juror perspectives go in **one** structured Gemini request to save quota. Failures (missing key, 401/403, 404 model, 429 rate limit, 5xx, timeout, malformed JSON) are shown as failures. Deterministic findings still appear, and no AI result is ever invented.
 
-## Deploy on Vercel
+When live AI is used, the draft text, its metadata and the brand's rules and facts are sent to Google's Gemini API. Don't submit confidential content.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploy (Vercel free tier)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Push this folder to a GitHub repository.
+2. On vercel.com, choose **Add New → Project** and import the repository. The framework is detected as Next.js; keep the defaults.
+3. Optional: add `GEMINI_API_KEY` (and `GEMINI_MODEL`) under **Settings → Environment Variables**, then redeploy.
+4. Open `/settings` on the deployed URL to confirm the AI status.
+
+Alternatively, run `npx vercel` from this folder and follow the prompts.
+
+## What works
+
+- **First run**: the demo brand, 10 rules, 6 facts (active, expired and pending) and 5 labelled seeded review items load automatically. **Try Demo** opens a reviewed example in one click.
+- **Deterministic checks** (`src/lib/engine/deterministic.ts`): banned terms, preferred terms, expired or pending facts, exact and key-figure fact matching, numerical claims (unsupported, or contradicting an approved fact), clinical-claim phrases, absolute guarantees, superlatives, tone vs the conflicting tone rules, long sentences, all-caps runs, missing or weak alt text, real WCAG contrast ratio and off-palette colours.
+- **AI jurors** (`src/lib/ai/gemini.ts`): a structured JSON schema and prompt-injection framing (content is wrapped as untrusted data). Server-side validation drops findings that quote text not present in the draft, marks findings citing non-existent rule or fact IDs as **Unverified**, and replaces every excerpt with the source record text.
+- **Coordinator** (`src/lib/engine/coordinator.ts`): merges duplicates, marks corroboration, and keeps disagreements in severity with a note.
+- **Findings UI**: grouped by source (Deterministic / AI-assisted / Seeded demo results) and then by juror. Each finding shows evidence panels, explanation, suggested fix, a before/after preview, model-reported confidence (labelled as not calibrated) and decision history.
+- **Fixes**: Accept (minimal local replacement), Edit, Dismiss (reason required), Escalate and Reopen. Each applied fix creates a new version.
+- **Approval workflow**: Draft → review → Submit → Under Review → Approve or Request Changes. Unresolved high-risk findings block approval unless the reviewer overrides them with a recorded reason. Editing approved text returns it to Draft.
+- **Version history**: word-level diff against the original or the previous version, plus lists of accepted fixes and dismissed findings with reasons.
+- **Guideline Intelligence**: a lexicon conflict detector finds R-001 ↔ R-009. The app shows both rules, the reason they conflict, example context, review statistics and an editable proposed clarification. Approving it versions the rule and keeps the old text. You can also paste guideline text to analyse it for conflicts.
+- **Insights**: review runs, open and high-risk findings, most flagged rules, most dismissed rules, dismissal reasons and potentially confusing guidelines with example notes and suggested improvements. Seeded history can be toggled off.
+- **Guideline management**: anyone can propose a rule edit, a new rule, or a banned or preferred term with a reason. Only the reviewer role can approve or reject, and the queue shows a word diff for each edit. Approved edits version the rule and keep the old text. New facts start as pending and must be approved before they can support claims; reviewers can re-verify a fact and set a new expiry. Every applied change goes into the brand change log.
+- **AI guideline analysis** (`src/lib/ai/conflicts.ts`, `POST /api/guidelines/analyze`): Gemini looks for conflicts across the current rules plus any pasted text. Results citing rule IDs that don't exist are discarded. A conflict between existing rules can be added to Guideline Intelligence, labelled as an AI proposal.
+- **Image checks** (`src/lib/image/analyze.ts`, browser-only): upload or drop PNG, JPEG, WebP, GIF or SVG files up to 5 MB, or use the bundled demo images (approved logo, stretched logo, off-brand banner). The app reads the file metadata, extracts the dominant colours and compares them with the palette (CIE76 ΔE), and computes a 64-bit perceptual hash (dHash). It flags off-palette images, logo files that don't match the reference (whole-file comparison) and logo files whose proportions differ by more than 3% from the reference (possible stretching). Alt text that is just a file name is flagged. Images are never sent to the AI.
+- **Multiple brands**: create a brand from the sidebar switcher or Settings, starting with starter rules, a copy of the current brand's rules, or nothing. Pages, insights, conflicts and new reviews are scoped to the brand in view. Each brand maps its rules to the built-in checks ("check categories"), so findings cite that brand's own rule IDs; a brand without a matching rule still gets the check, just without a citation. Brands you create can be deleted.
+- **Brand-book import** (`src/lib/import/extract.ts`, `src/components/guidelines/ImportPanel.tsx`): PDF, TXT or Markdown, read in the browser with pdf.js. Rule-like sentences, banned phrases ("Never use the phrase …"), preferred terms ("Use … instead of …") and named hex colours are detected by pattern. AI suggestions are optional (`POST /api/guidelines/extract`), and any AI rule whose quote isn't found verbatim in the document is discarded. Everything becomes a proposal for a reviewer. Approving rules re-runs conflict detection, so the sample book's "playful and conversational" vs "strictly formal" clash is caught automatically.
+- **Video review** (`src/lib/video/analyze.ts`, `src/components/review/VideoPanel.tsx`, browser-only): MP4, WebM, Ogg or MOV up to 100 MB. The app reads the metadata and samples up to 12 evenly spaced frames, each compared with the palette (frames that are 40% or more off-palette are flagged with timestamps). WebVTT and SRT captions are parsed and checked for presence, runtime coverage and reading speed (above 20 characters per second). The caption text also goes through every text check, so spoken claims such as "miracle formula" or "clinically proven" are flagged with their caption timestamp.
+- **Extra accessibility checks**: non-descriptive link text ("click here", "read more"), heavy emoji use and long all-lowercase hashtags.
+- **Resilience**: localStorage saved by the earlier version of this app is migrated automatically. corrupted or unavailable localStorage restores the demo and shows a notice; empty content, oversized content and invalid hex colours are handled; the layout works on mobile.
+
+## Design and walkthrough
+
+- **Theme, "Ink & Ember":** warm stone neutrals (`stone-50` canvas, white cards with soft shadows), near-black ink for primary actions, and ember orange (`orange-600`) kept for risk and the one key call to action on each screen. Instrument Serif is used for headings and Geist for UI text. Colour tokens and utilities live in `src/app/globals.css`, and the shared primitives in `src/components/ui.tsx`.
+- **Review workspace:** issues are highlighted in the text by severity, and clicking one opens its finding. Only one finding is open at a time. A four-step progress bar (Draft → Jury review → Resolve → Approval) and a verdict card with a "Resolve next" button show what to do next. Image and colour inputs are folded away until needed.
+- **Guided walkthrough** (`src/components/tour/*`): a 10-step spotlight tour opens automatically on the first visit and can be restarted with "Take the tour" in the sidebar. It is accessible: a modal dialog labelled by its title, focus moved to the primary button, focus kept inside the card, ←/→/Esc keys and a polite live region. It respects reduced-motion settings and shows as a bottom sheet on phones. Steps target `data-tour` attributes, so the copy lives in `steps.ts`.
+
+## Known limitations
+
+- localStorage is prototype persistence. It is not secure, not multi-user and not a tamper-proof audit trail.
+- Roles are simulated, with no authentication. Approval applies only inside this app and cannot stop publication elsewhere.
+- Exact and lexical matching is not semantic verification. A paraphrase may be valid, and an exact match may still mislead in context.
+- The deterministic conflict check only catches opposing terms. AI conflict analysis needs a Gemini key.
+- Image checks are measurements, not understanding. Nothing identifies what an image depicts, finds a logo inside a larger image, or checks logo clear space. Logo comparison works on whole logo files only.
+- Video checks are limited to sampled frames and captions. Audio is not transcribed, there's no frame-by-frame or flashing-content analysis, and on-screen text is not read.
+- Scanned (image-only) PDFs can't be imported because there's no OCR. Pattern extraction can miss rules phrased unusually; AI suggestions help when a key is configured.
+- Brands live in one browser's storage; there's no sharing between users.
+- AI findings are assessments, not legal advice. Confidence is self-reported by the model.
+
+## Testing notes
+
+- `scripts/mock-gemini.mjs` is a local mock of the Gemini API. Start it with `node scripts/mock-gemini.mjs`, then run the app with `GEMINI_API_KEY=test GEMINI_API_BASE=http://localhost:3999`. Switch modes with `curl -X POST localhost:3999/mode -d ok|fakeids|badjson|ratelimit|down`. The mock answers both the review and the guideline-analysis endpoints.
+- Brand-book path to rehearse: brand switcher → New brand… → "Empty" → Rules tab → Import brand book → Use sample brand book → Propose → switch to Reviewer → Conflicts & proposals → approve. Expect 12 rules and a detected R-001 ↔ R-002 tone conflict. Import again to add the banned and preferred terms.
+- Video path to rehearse: Northstar → new review → Media & accessibility → Content includes a video → Use demo video + captions → Run Jury Review. Expect findings for off-palette frames at 00:04 and 00:05, "miracle formula" and a clinical claim in the captions at 00:03, and fast captions.
+- Demo assets (`public/demo/aurora-brand-book.pdf`, `northstar-promo.mp4`, `northstar-promo.vtt`) are fictional and generated by `node scripts/make-demo-assets.mjs`. The video step needs ffmpeg. `public/pdf.worker.min.mjs` is copied from `pdfjs-dist`; copy it again after upgrading that package.
+- Image path to rehearse: Guidelines → switch to Reviewer → Use demo logo. Then in a new review, tick "Content includes an image" → Demo: Stretched logo → Run Jury Review. Expect a "possibly stretched" finding with the hash similarity and the aspect ratios.
+- Demo path to rehearse: Try Demo → expand evidence → Accept Fix on `miracle formula` → Dismiss `50%` (Evidence insufficient) → Guidelines → Approve Revision → Insights → back to the item → Re-run Jury Review → Approval → Submit → switch to Reviewer → Approve.
+
+## Team module map
+
+| Owner | Area | Files |
+|---|---|---|
+| Rahil | Backend, AI orchestration, deterministic checks, evidence validation | `src/lib/engine/*`, `src/lib/ai/*`, `src/app/api/*`, `src/lib/import/*` |
+| Hassan | Review workspace, findings, fixes, versions, approval, brands, tour | `src/components/review/*`, `src/components/brands/*`, `src/components/tour/*`, `src/app/review/*`, `src/lib/store.ts` |
+| Niveth | Images, video, accessibility, contrast, guideline intelligence, insights | `src/lib/image/*`, `src/lib/video/*`, `src/lib/engine/color.ts`, `src/lib/engine/contrast.ts`, `src/lib/engine/conflicts.ts`, `src/lib/insights.ts`, `src/components/guidelines/*`, `src/app/guidelines`, `src/app/insights` |
+| Nithin | Demo brand, seed data, demo images, scenarios, QA, README, video | `src/lib/seed/*`, `public/demo/*`, `README.md`, `scripts/*` |
+
+Shared contracts live in `src/lib/types.ts`. Tell the team before changing them.
+#   p l u m b l i n e  
+ 

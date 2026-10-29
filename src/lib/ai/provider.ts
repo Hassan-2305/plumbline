@@ -91,8 +91,8 @@ async function checkProvider(cfg: ProviderConfig): Promise<{ verified: "yes" | "
           : res.status === 429
             ? `${label} rate limit or quota reached for this key.`
             : `${label} returned HTTP ${res.status} while checking the model.`;
-    // Rate limits and quota pass; report them without switching the AI off or caching them.
-    if (res.status === 429) return { verified: "unchecked", message };
+    // Rate limits, quota and provider outages pass; report them without switching the AI off or caching them.
+    if (res.status === 429 || res.status >= 500) return { verified: "unchecked", message };
     statusCache.set(cacheKey, { at: Date.now(), ok, message });
     return { verified: ok ? "yes" : "no", message };
   } catch {
@@ -103,15 +103,15 @@ async function checkProvider(cfg: ProviderConfig): Promise<{ verified: "yes" | "
 /** Status of the primary provider, and of the Gemini fallback when one is configured. */
 export async function verifyModel() {
   const primary = aiConfig();
-  if (!primary.configured) return { verified: "no" as const, message: "No AI key is set on the server (OPENAI_API_KEY).", fallback: null };
+  if (!primary.configured) return { verified: "no" as const, message: "No AI key is set on the server (OPENAI_API_KEY).", fallback: null, active: null };
   const fb = fallbackConfig();
   const [p, f] = await Promise.all([checkProvider(primary), fb ? checkProvider(fb) : Promise.resolve(null)]);
   const fallback = fb && f ? { provider: fb.label, model: fb.model, verified: f.verified } : null;
   if (p.verified === "no" && fb && f && f.verified !== "no") {
-    return { verified: f.verified, message: `${p.message} Reviews will use ${fb.label} (${fb.model}) instead.`, fallback };
+    return { verified: f.verified, message: `${p.message} Reviews will use ${fb.label} (${fb.model}) instead.`, fallback, active: fb };
   }
   const extra = fb && f ? (f.verified === "no" ? ` The ${fb.label} fallback has a problem: ${f.message}` : ` If it fails, ${fb.label} (${fb.model}) is used as a fallback.`) : "";
-  return { verified: p.verified, message: p.message + extra, fallback };
+  return { verified: p.verified, message: p.message + extra, fallback, active: null };
 }
 
 /**

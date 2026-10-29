@@ -52,7 +52,7 @@ export default function IntegrationsPage() {
           </p>
         </Row>
         <Row icon={<FileUp size={15} />} name="Brand-book import" status={<Badge tone="green">Built in</Badge>}>
-          <p>Import rules, banned terms, preferred terms and colours from PDF, Word, TXT or Markdown. Files are read in the browser and never uploaded.</p>
+          <p>Import rules, banned terms, preferred terms and colours from PDF, TXT or Markdown. Files are read in the browser and never uploaded.</p>
           <Link href="/guidelines" className="mt-1 inline-block text-xs font-medium text-accent-700 hover:underline">Import from Guidelines →</Link>
         </Row>
         <Row icon={<Download size={15} />} name="Data export" status={<Badge tone="green">Built in</Badge>}>

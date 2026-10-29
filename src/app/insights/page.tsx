@@ -30,8 +30,8 @@ export default function InsightsPage() {
       />
       <p className="-mt-4 text-xs text-stone-500">
         {includeSeeded
-          ? `Includes ${ins.seededItems} seeded demo items (fictional decisions, labelled) and ${ins.userItems} items created in this browser.`
-          : `Only the ${ins.userItems} items created in this browser.`}
+          ? `Includes ${ins.seededItems} seeded demo items (fictional decisions, labelled) and ${ins.userItems} ${ins.userItems === 1 ? "item" : "items"} created in this browser.`
+          : `Only the ${ins.userItems} ${ins.userItems === 1 ? "item" : "items"} created in this browser.`}
       </p>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">

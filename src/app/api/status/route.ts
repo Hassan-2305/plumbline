@@ -4,7 +4,9 @@ import type { AiStatusResponse } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const { configured, label, service, model } = aiConfig();
+  const primary = aiConfig();
   const v = await verifyModel();
-  return Response.json({ configured, provider: label, service, model, verified: v.verified, message: v.message, fallback: v.fallback } satisfies AiStatusResponse);
+  // When the primary key is rejected and the fallback works, report the provider actually doing the reviews.
+  const { label, service, model } = v.active ?? primary;
+  return Response.json({ configured: primary.configured, provider: label, service, model, verified: v.verified, message: v.message, fallback: v.fallback } satisfies AiStatusResponse);
 }

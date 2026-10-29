@@ -23,9 +23,9 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
-Other commands: `npm test` (58 unit tests), `npm run typecheck`, `npm run lint`, `npm run build`, `npm start`, `npm run demo-assets`.
+Other commands: `npm test` (60 unit tests), `npm run typecheck`, `npm run lint`, `npm run build`, `npm start`, `npm run demo-assets`.
 
-No database, login or API key is required. State lives in browser `localStorage` (key `plumbline-jury:v1`). Use **Reset Demo** (Overview or Settings) to restore the original state.
+No database, login or API key is required. State lives in browser `localStorage` (key `plumbline-jury:v1`). Use **Reset demo** in Settings to restore the original state.
 
 ## Live AI (optional)
 
@@ -47,7 +47,7 @@ Create `.env.local` (see `.env.example`):
 - The AI routes refuse requests from other websites (Origin / `Sec-Fetch-Site`) and allow each client address `AI_RATE_LIMIT` calls per 10 minutes (default 30), so a leaked URL can't run up the bill. Also set a spending limit in your OpenAI and Google accounts.
 - `tests/security.test.ts` checks these rules.
 
-All four juror perspectives go in **one** structured request (OpenAI strict structured outputs, or Gemini `responseSchema`) to keep cost down. Failures (missing key, 401/403, 404 model, 429 rate limit or no quota, refusal, 5xx, timeout, malformed JSON) are shown as failures. Deterministic findings still appear, and no AI result is ever invented.
+All four juror perspectives go in **one** structured request (OpenAI strict structured outputs, or Gemini `responseSchema`) to keep cost down. Failures (missing key, 401/403, 404 model, 429 rate limit or no quota, refusal, 5xx, timeout, malformed JSON) never produce AI results. Each review gives the AI 18 seconds (fallback included); if it is slow or fails, the review finishes quietly with the rule-based findings and is labelled "Rule-based checks only", so nothing claims the AI ran. The attempt is recorded in the AI disclosure ledger. Guideline analysis and brand-book import, which you start explicitly, show the error instead.
 
 When live AI is used, the draft text, its metadata and the brand's rules and facts are sent to the active provider after emails, phone numbers, card numbers, secrets and the brand's sensitive terms are masked. Items marked confidential are never sent, and every call is logged in the AI disclosure ledger.
 
@@ -62,13 +62,13 @@ Alternatively, run `npx vercel` from this folder and follow the prompts.
 
 ## What works
 
-- **First run**: the demo brand, 10 rules, 6 facts (active, expired and pending) and 5 labelled seeded review items load automatically. **Try Demo** opens a reviewed example in one click.
+- **First run**: the demo brand, 10 rules, 6 facts (active, expired and pending) and 5 labelled seeded review items load automatically. The sample post on Home opens a reviewed example in one click.
 - **Deterministic checks** (`src/lib/engine/deterministic.ts`): banned terms, preferred terms, expired or pending facts, exact and key-figure fact matching, numerical claims (unsupported, or contradicting an approved fact), clinical-claim phrases, absolute guarantees, superlatives, tone vs the conflicting tone rules, long sentences, all-caps runs, missing or weak alt text, real WCAG contrast ratio and off-palette colours.
 - **AI jurors** (`src/lib/ai/review.ts`, provider client in `src/lib/ai/provider.ts`): a structured JSON schema and prompt-injection framing (content is wrapped as untrusted data). Server-side validation drops findings that quote text not present in the draft, marks findings citing non-existent rule or fact IDs as **Unverified**, and replaces every excerpt with the source record text.
 - **Coordinator** (`src/lib/engine/coordinator.ts`): merges duplicates, marks corroboration, and keeps disagreements in severity with a note.
 - **Findings UI**: grouped by source (Deterministic / AI-assisted / Seeded demo results) and then by juror. Each finding shows evidence panels, explanation, suggested fix, a before/after preview, model-reported confidence (labelled as not calibrated) and decision history.
 - **Fixes**: Accept (minimal local replacement), Edit, Dismiss (reason required), Escalate and Reopen. Each applied fix creates a new version.
-- **Approval workflow**: Draft → review → Submit → Under Review → Approve or Request Changes. Unresolved high-risk findings block approval unless the reviewer overrides them with a recorded reason. Editing approved text returns it to Draft.
+- **Approval workflow**: Draft → In review → Ready for approval → Approved, with Request changes sending it back. Unresolved high-risk findings block approval unless the reviewer overrides them with a recorded reason. Editing approved text returns it to Draft.
 - **Version history**: word-level diff against the original or the previous version, plus lists of accepted fixes and dismissed findings with reasons.
 - **Guideline Intelligence**: a lexicon conflict detector finds R-001 ↔ R-009. The app shows both rules, the reason they conflict, example context, review statistics and an editable proposed clarification. Approving it versions the rule and keeps the old text. You can also paste guideline text to analyse it for conflicts.
 - **Insights**: review runs, open and high-risk findings, most flagged rules, most dismissed rules, dismissal reasons and potentially confusing guidelines with example notes and suggested improvements. Seeded history can be toggled off.
@@ -89,7 +89,8 @@ Alternatively, run `npx vercel` from this folder and follow the prompts.
 
 - **Theme, warm and calm:** a cream canvas with white cards, warm stone neutrals and one orange accent (`accent-600`) for primary actions and selection; amber marks warnings and red is kept for genuine risk. Headings use Instrument Serif, body text Geist (Geist Mono for IDs). Home leads with what needs attention, a review queue, approval status, top issues and a get-started checklist computed from real workspace state. Motion is limited to short transitions. Tokens live in `src/app/globals.css`; primitives in `src/components/ui.tsx`.
 - **Navigation:** a compact sidebar grouped into Workspace (Home, Content, Reviews, Approvals), Brand (Guidelines, Brand assets, Approved facts), Intelligence (Insights, Activity) and Workspace settings (Team & permissions, Integrations, Settings). It also has a workspace switcher (one workspace per brand), Ctrl K search across content, rules, facts and pages, and a profile menu for switching the simulated user. On phones it becomes a slide-in drawer.
-- **Home:** a workspace, not a dashboard. It shows Continue working, Needs your review (approvals, mentions, changes requested and, for reviewers, guideline decisions), Your content by lifecycle state, and Recent activity.
+- **Home:** a hero with Create new content, Browse templates and a one-click reviewed sample; Needs your attention; Recent activity; Brand guidelines; and a side column with the review queue, approval status by lifecycle state, top issue types and a Get started checklist computed from real workspace state. A bell lists mentions, approvals assigned to you and changes requested.
+- **Approvals with simulated people:** when content waits on someone else, the decision bar says who and offers a one-click switch to that person, since one browser plays every role.
 - **Review workspace (`/content/[id]`):** a split view. On the left, the content renders as it will appear (a social post card, an email with its subject line, or a page or document) with findings underlined in place; Edit and Versions views sit beside it. On the right, the review panel shows a plain verdict, findings grouped by juror with evidence and fixes, discussion and history. Selecting a finding highlights its text, and selecting the text opens its finding. Run review, Submit, Request changes and Approve all sit in one decision bar, with the lifecycle (Draft → In review → Changes requested → Ready for approval → Approved), the creator and the assigned reviewer.
 - **Guided walkthrough** (`src/components/tour/*`): a 12-step spotlight tour opens automatically on a first visit to any page. It walks through the workflow (Create → Review → Decide → Approve → Improve), and a strip on every card shows which stage you are on. Restart it with "Product tour" in the sidebar, or share a link ending in `?tour` (for example `/?tour`) to open it every time. It is accessible: a modal dialog labelled by its title, focus moved to the primary button, focus kept inside the card, ←/→/Esc keys and a polite live region. It respects reduced-motion settings and shows as a bottom sheet on phones. Steps target `data-tour` attributes, so the copy lives in `steps.ts`.
 
@@ -124,4 +125,3 @@ Alternatively, run `npx vercel` from this folder and follow the prompts.
 | Nithin | Demo brand, seed data, demo images, scenarios, QA, README, video | `src/lib/seed/*`, `public/demo/*`, `README.md`, `scripts/*` |
 
 Shared contracts live in `src/lib/types.ts`. Tell the team before changing them.
-# plumbline

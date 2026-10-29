@@ -1,11 +1,11 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronRight, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createFromExample, useAppState } from "@/lib/store";
 import { cx } from "../ui";
-import { TOUR_STEPS } from "./steps";
+import { TOUR_STAGES, TOUR_STEPS, type TourStage } from "./steps";
 
 // Accessible spotlight walkthrough: a modal dialog anchored to a highlighted
 // element. Keyboard: ←/→ to move, Esc to close. Focus stays inside the card.
@@ -36,6 +36,29 @@ function safeSet(store: Storage | undefined, k: string, v: string) {
 }
 
 type Rect = { top: number; left: number; width: number; height: number };
+
+/** Create → Review → Decide → Approve → Improve, with the current stage lit. */
+function WorkflowStrip({ current }: { current?: TourStage }) {
+  const at = current ? TOUR_STAGES.indexOf(current) : -1;
+  return (
+    <ol aria-label="Workflow" className="mt-3 flex flex-wrap items-center gap-y-1 text-[11px] font-medium">
+      {TOUR_STAGES.map((s, i) => (
+        <li key={s} className="flex items-center">
+          {i > 0 && <ChevronRight size={10} className="mx-px text-stone-300" aria-hidden />}
+          <span
+            aria-current={i === at ? "step" : undefined}
+            className={cx(
+              "rounded-full px-1.5 py-0.5",
+              i === at ? "bg-accent-600 text-white" : at === -1 ? "bg-stone-100 text-stone-700" : i < at ? "bg-accent-50 text-accent-800" : "text-stone-400",
+            )}
+          >
+            {s}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 export function TourProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -70,14 +93,18 @@ export function TourProvider({ children }: { children: ReactNode }) {
 
   const start = useCallback(() => setIndex(0), []);
 
-  // First visit: open the welcome step once the app state has loaded.
+  // First visit (on any page), or any visit with ?tour in the URL: open the
+  // welcome step once the app state has loaded.
   useEffect(() => {
     if (!state || autoStarted.current) return;
-    autoStarted.current = true;
-    if (path !== "/" || safeGet(window.localStorage, SEEN_KEY)) return;
-    const t = setTimeout(() => setIndex(0), 300);
+    const forced = new URLSearchParams(window.location.search).has("tour");
+    if (!forced && safeGet(window.localStorage, SEEN_KEY)) return;
+    const t = setTimeout(() => {
+      autoStarted.current = true;
+      setIndex(0);
+    }, 400);
     return () => clearTimeout(t);
-  }, [state, path]);
+  }, [state]);
 
   // Navigate to the step's route.
   useEffect(() => {
@@ -180,7 +207,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     // Phones: a bottom sheet is easier to read than a floating card.
     cardStyle = { left: 12, width: vw - 24, bottom: 12 };
   } else if (rect) {
-    const cardH = 250;
+    const cardH = 290;
     const below = rect.top + rect.height + pad + 12;
     const above = rect.top - pad - 12 - cardH;
     const clampTop = (t: number) => Math.min(Math.max(16, t), vh - cardH - 16);
@@ -247,6 +274,8 @@ export function TourProvider({ children }: { children: ReactNode }) {
             <p id="tour-body" className="mt-2 text-sm leading-relaxed text-stone-600">
               {step.body}
             </p>
+            <WorkflowStrip current={step.stage} />
+
             <div className="mt-4 flex items-center gap-3">
               <div className="flex gap-1" aria-hidden>
                 {TOUR_STEPS.map((s, i) => (
@@ -266,7 +295,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
                 <button
                   ref={primaryRef}
                   onClick={next}
-                  className="inline-flex h-8 items-center gap-1 rounded-lg bg-stone-900 px-3 text-xs font-medium text-white hover:bg-stone-800"
+                  className="inline-flex h-8 items-center gap-1 rounded-lg bg-accent-600 px-3 text-xs font-medium text-white hover:bg-accent-700"
                 >
                   {index === 0 ? "Start tour" : index === total - 1 ? "Finish" : "Next"} {index! < total - 1 && <ArrowRight size={13} />}
                 </button>

@@ -147,7 +147,7 @@ export default function Home() {
                 Plumbline Jury reviews your content against {brand.name}’s guidelines, approved facts and compliance rules before it goes out.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
-                <Link href="/content/new" className="inline-flex h-11 items-center gap-2 rounded-xl bg-accent-600 px-5 text-[14px] font-medium text-white shadow-[0_1px_2px_rgb(234_88_12/0.3)] transition-colors hover:bg-accent-700">
+                <Link href="/content/new" data-tour="create-cta" className="inline-flex h-11 items-center gap-2 rounded-xl bg-accent-600 px-5 text-[14px] font-medium text-white shadow-[0_1px_2px_rgb(234_88_12/0.3)] transition-colors hover:bg-accent-700">
                   <PenLine size={16} /> Create new content <ArrowRight size={15} />
                 </Link>
                 <button onClick={() => setTemplates(true)} className="inline-flex h-11 items-center gap-2 rounded-xl border border-stone-200 bg-white px-5 text-[14px] font-medium text-stone-800 shadow-soft transition-colors hover:border-stone-300">

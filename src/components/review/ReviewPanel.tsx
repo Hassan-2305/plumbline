@@ -33,9 +33,7 @@ function Summary({ item, onResolve }: { item: ContentItem; onResolve: (id: strin
         : "Rule-based checks + seeded demo jury results (not a live AI call)"
       : r.aiStatus === "ok"
         ? `Rule-based checks + AI jurors (${r.model})`
-        : r.aiStatus === "failed"
-          ? `Rule-based checks only. AI failed: ${r.aiError}`
-          : r.aiStatus === "confidential"
+        : r.aiStatus === "confidential"
             ? "Rule-based checks only. Confidential, nothing sent to AI"
             : r.aiStatus === "not_configured"
               ? "Rule-based checks only. AI not configured"

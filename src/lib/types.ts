@@ -270,7 +270,8 @@ export interface ReviewRun {
   id: string;
   at: string;
   mode: "deterministic" | "deterministic+ai" | "seeded";
-  aiStatus: "not_requested" | "ok" | "failed" | "not_configured" | "seeded" | "confidential";
+  /** "skipped": the AI was slow or unavailable, so the review finished with rule-based checks. */
+  aiStatus: "not_requested" | "ok" | "failed" | "skipped" | "not_configured" | "seeded" | "confidential";
   aiError?: string;
   model?: string;
   versionNumber: number;
@@ -480,7 +481,7 @@ export interface AiConflict {
 }
 
 export type ConflictAnalysisResponse =
-  | { ok: true; model: string; conflicts: AiConflict[]; dropped: number }
+  | { ok: true; model: string; service: string; fallbackFrom?: AiFallback; conflicts: AiConflict[]; dropped: number }
   | { ok: false; error: { code: AiErrorCode; message: string } };
 
 /** API contract: POST /api/review */
@@ -500,8 +501,15 @@ export type AiErrorCode =
   | "auth_failed";
 
 export type AiReviewResponse =
-  | { ok: true; model: string; findings: DraftFinding[]; dropped: number }
+  | { ok: true; model: string; service: string; fallbackFrom?: AiFallback; findings: DraftFinding[]; dropped: number }
   | { ok: false; error: { code: AiErrorCode; message: string } };
+
+/** The provider that failed before the fallback answered. */
+export interface AiFallback {
+  service: string;
+  model: string;
+  error: string;
+}
 
 export interface AiStatusResponse {
   configured: boolean;
@@ -512,4 +520,6 @@ export interface AiStatusResponse {
   model: string;
   verified: "yes" | "no" | "unchecked";
   message: string;
+  /** Gemini, when configured as a fallback for OpenAI. */
+  fallback?: { provider: string; model: string; verified: "yes" | "no" | "unchecked" } | null;
 }

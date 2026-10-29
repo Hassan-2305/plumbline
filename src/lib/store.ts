@@ -72,6 +72,8 @@ function sanitize(s: AppState): AppState {
     items: s.items.map((i) => ({
       ...i,
       comments: Array.isArray(i.comments) ? i.comments : [],
+      // AI outages aren't shown in the history; the AI log on Integrations keeps the details.
+      events: i.events.map((e) => (/ AI failed: /.test(e.text) ? { ...e, text: e.text.replace(/ AI failed: .*$/, " Rule-based checks.") } : e)),
       // v4 → v5 lifecycle: "under_review" became "ready_for_approval"; reviewed drafts are "in_review".
       status:
         (i.status as string) === "under_review"
@@ -412,7 +414,7 @@ export function commitReview(
         {
           at,
           by: actor(s),
-          text: `Jury review on v${version}: ${fresh.length} new finding(s). ${opts.mode === "seeded" ? "Includes seeded demo results." : opts.aiStatus === "ok" ? `Live AI (${opts.model}).` : opts.aiStatus === "failed" ? `AI failed: ${opts.aiError}` : "Deterministic only."}`,
+          text: `Jury review on v${version}: ${fresh.length} new finding(s). ${opts.mode === "seeded" ? "Includes seeded demo results." : opts.aiStatus === "ok" ? `Live AI (${opts.model}).` : "Rule-based checks."}`,
         },
       ],
     };

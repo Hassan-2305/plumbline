@@ -2,6 +2,8 @@ import { AiError } from "@/lib/ai/provider";
 import { runAiReview } from "@/lib/ai/review";
 import type { AiReviewRequest, AiReviewResponse } from "@/lib/types";
 
+import { guardAiRequest } from "@/lib/ai/guard";
+
 export const dynamic = "force-dynamic";
 
 const MAX_CHARS = 8000;
@@ -11,6 +13,8 @@ function fail(code: Extract<AiReviewResponse, { ok: false }>["error"]["code"], m
 }
 
 export async function POST(request: Request) {
+  const blocked = guardAiRequest(request);
+  if (blocked) return blocked;
   let body: AiReviewRequest;
   try {
     body = await request.json();

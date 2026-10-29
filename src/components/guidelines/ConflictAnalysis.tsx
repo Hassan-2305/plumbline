@@ -37,10 +37,10 @@ export function ConflictAnalysis({ state }: { state: AppState }) {
     try {
       const sent = all.map((r) => ({ id: r.id, text: redact(r.text, brand.sensitiveTerms).text }));
       const counts = all.flatMap((r) => redact(r.text, brand.sensitiveTerms).counts);
-      const log = (outcome: "ok" | "failed", model: string, error?: string) =>
+      const log = (outcome: "ok" | "failed", model: string, error?: string, service?: string) =>
         recordAiCall({
           purpose: "conflict analysis",
-          service: ai?.service ?? "AI provider",
+          service: service ?? ai?.service ?? "AI provider",
           model,
           sentPreview: sent.map((r) => `${r.id}: ${r.text}`).join("\n"),
           sentChars: sent.reduce((n, r) => n + r.text.length, 0),
@@ -55,7 +55,8 @@ export function ConflictAnalysis({ state }: { state: AppState }) {
       });
       const data = (await res.json().catch(() => null)) as ConflictAnalysisResponse | null;
       if (data?.ok) {
-        log("ok", data.model);
+        if (data.fallbackFrom) log("failed", data.fallbackFrom.model, data.fallbackFrom.error, data.fallbackFrom.service);
+        log("ok", data.model, undefined, data.service);
         setAiResult(data);
       } else {
         const msg = data && !data.ok ? data.error.message : `Request failed (HTTP ${res.status}).`;

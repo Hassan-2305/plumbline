@@ -1,6 +1,8 @@
 import { AiError } from "@/lib/ai/provider";
 import { extractRulesWithAi } from "@/lib/ai/extract";
 
+import { guardAiRequest } from "@/lib/ai/guard";
+
 export const dynamic = "force-dynamic";
 
 const MAX = 30000;
@@ -10,6 +12,8 @@ function fail(code: string, message: string, status: number) {
 }
 
 export async function POST(request: Request) {
+  const blocked = guardAiRequest(request);
+  if (blocked) return blocked;
   let body: { text?: unknown };
   try {
     body = await request.json();

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { aiConfig, callModel, toStrictJsonSchema } from "@/lib/ai/provider";
+import { aiConfig, callModel, resetProviderState, toStrictJsonSchema, verifyModel } from "@/lib/ai/provider";
 import { POST } from "@/app/api/review/route";
 import { NORTHSTAR } from "@/lib/seed/brand";
 
@@ -10,6 +10,7 @@ function openAiReply(content: unknown, extra: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
+  resetProviderState();
   for (const k of ENV) vi.stubEnv(k, "");
 });
 afterEach(() => {
@@ -68,6 +69,7 @@ describe("OpenAI calls", () => {
   it("turns failures into errors instead of results", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response('{"error":{"code":"invalid_api_key"}}', { status: 401 })));
     await expect(callModel("s", "u", { type: "OBJECT", properties: {} })).rejects.toMatchObject({ code: "auth_failed" });
+    resetProviderState(); // a rejected key is remembered; start fresh for the next case
     vi.stubGlobal("fetch", vi.fn(async () => new Response('{"error":{"code":"insufficient_quota"}}', { status: 429 })));
     await expect(callModel("s", "u", { type: "OBJECT", properties: {} })).rejects.toThrow(/quota/);
     vi.stubGlobal("fetch", vi.fn(async () => openAiReply({}, { message: { refusal: "no", content: null } })));
@@ -97,6 +99,70 @@ describe("OpenAI calls", () => {
     expect(data.dropped).toBe(1); // the quote that isn't in the post
     expect(data.findings).toHaveLength(1);
     expect(data.findings[0]).toMatchObject({ source: "ai", verification: "verified", offendingText: "clinically proven", ruleIds: ["R-005"] });
+  });
+
+  it("retries on Gemini when OpenAI fails and a Gemini key is set", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "g-test");
+    const fetchMock = vi.fn(async (url: string) =>
+      url.includes("openai")
+        ? new Response('{"error":{"code":"insufficient_quota"}}', { status: 429 })
+        : new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"ok":true}' }] } }] }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const out = await callModel("s", "u", { type: "OBJECT", properties: { ok: { type: "BOOLEAN" } } });
+    expect(out).toMatchObject({ service: "Google Gemini API", model: "gemini-flash-latest", json: { ok: true }, fallbackFrom: { service: "OpenAI API", model: "gpt-5.4-mini" } });
+    expect(out.fallbackFrom!.error).toMatch(/quota/);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports both failures when the Gemini fallback fails too", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "g-test");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 503 })));
+    await expect(callModel("s", "u", { type: "OBJECT", properties: {} })).rejects.toThrow(/OpenAI is unavailable.*Google Gemini fallback also failed/);
+  });
+
+  it("does not fall back without a Gemini key", async () => {
+    const fetchMock = vi.fn(async () => new Response("", { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(callModel("s", "u", { type: "OBJECT", properties: {} })).rejects.toMatchObject({ code: "unavailable" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("status points at Gemini when the OpenAI key is rejected", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "sk-bad-fallback-status");
+    vi.stubEnv("GEMINI_API_KEY", "g-ok-fallback-status");
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => new Response("{}", { status: url.includes("openai") ? 401 : 200 })));
+    const v = await verifyModel();
+    expect(v.verified).toBe("yes");
+    expect(v.message).toMatch(/rejected by OpenAI.*Google Gemini \(gemini-flash-latest\) instead/);
+    expect(v.fallback).toMatchObject({ provider: "Google Gemini", verified: "yes" });
+  });
+
+  it("skips a rejected OpenAI key on later calls and goes straight to Gemini", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "g-test");
+    const gemini = () => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"ok":true}' }] } }] }), { status: 200 });
+    const fetchMock = vi.fn(async (url: string) => (url.includes("openai") ? new Response("", { status: 401 }) : gemini()));
+    vi.stubGlobal("fetch", fetchMock);
+    await callModel("s", "u", { type: "OBJECT", properties: {} });
+    await callModel("s", "u", { type: "OBJECT", properties: {} });
+    expect(fetchMock.mock.calls.filter(([u]) => String(u).includes("openai"))).toHaveLength(1);
+  });
+
+  it("stops a slow provider within the budget and still leaves time for the fallback", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "g-test");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string, init: RequestInit) =>
+        url.includes("openai")
+          ? new Promise<Response>((_, reject) => init.signal!.addEventListener("abort", () => reject(Object.assign(new Error("t"), { name: "TimeoutError" }))))
+          : Promise.resolve(new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"ok":true}' }] } }] }), { status: 200 })),
+      ),
+    );
+    const t = Date.now();
+    const out = await callModel("s", "u", { type: "OBJECT", properties: {} }, "probe", 5000);
+    expect(Date.now() - t).toBeLessThan(4500); // OpenAI gets 60% of the budget
+    expect(out.service).toBe("Google Gemini API");
+    expect(out.fallbackFrom?.error).toMatch(/did not respond within 3 seconds/);
   });
 
   it("reports a missing key as not configured", async () => {

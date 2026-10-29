@@ -1,7 +1,10 @@
+import "server-only";
 import type { AiErrorCode } from "../types";
+import { scrubSecrets } from "./guard";
 
 // Server-only model client. API keys never leave the server.
 // OpenAI is used when OPENAI_API_KEY is set; otherwise Gemini if GEMINI_API_KEY is set.
+// When both keys are set and an OpenAI call fails, the same request is retried on Gemini.
 // Every call asks for structured JSON and throws AiError on any failure — it never returns fake output.
 
 export type ProviderId = "openai" | "gemini";
@@ -21,17 +24,30 @@ const PROVIDERS = {
     service: "Google Gemini API",
     keyVar: "GEMINI_API_KEY",
     modelVar: "GEMINI_MODEL",
-    defaultModel: "gemini-2.5-flash",
+    defaultModel: "gemini-flash-latest",
     base: () => process.env.GEMINI_API_BASE?.trim() || "https://generativelanguage.googleapis.com/v1beta",
   },
 } as const;
 
-export function aiConfig() {
-  const id: ProviderId = process.env.OPENAI_API_KEY?.trim() ? "openai" : process.env.GEMINI_API_KEY?.trim() ? "gemini" : "openai";
+function providerConfig(id: ProviderId) {
   const p = PROVIDERS[id];
   const key = process.env[p.keyVar]?.trim() || "";
   const model = process.env[p.modelVar]?.trim() || p.defaultModel;
   return { provider: id, label: p.label, service: p.service, keyVar: p.keyVar, modelVar: p.modelVar, key, model, configured: key.length > 0 };
+}
+type ProviderConfig = ReturnType<typeof providerConfig>;
+
+/** The provider tried first. */
+export function aiConfig() {
+  const id: ProviderId = process.env.OPENAI_API_KEY?.trim() ? "openai" : process.env.GEMINI_API_KEY?.trim() ? "gemini" : "openai";
+  return providerConfig(id);
+}
+
+/** Gemini, when OpenAI is primary and a Gemini key is also set. */
+export function fallbackConfig(): ProviderConfig | null {
+  if (aiConfig().provider !== "openai") return null;
+  const g = providerConfig("gemini");
+  return g.configured ? g : null;
 }
 
 export class AiError extends Error {
@@ -40,35 +56,62 @@ export class AiError extends Error {
   }
 }
 
-let statusCache: { at: number; key: string; ok: boolean; message: string } | null = null;
+const statusCache = new Map<string, { at: number; ok: boolean; message: string }>();
 
-/** Checks the configured model exists for this key (metadata call, no generation cost). */
-export async function verifyModel() {
-  const { provider, label, keyVar, modelVar, key, model, configured } = aiConfig();
-  if (!configured) return { verified: "no" as const, message: "No AI key is set on the server (OPENAI_API_KEY)." };
-  const cacheKey = `${provider}:${model}`;
-  if (statusCache && statusCache.key === cacheKey && Date.now() - statusCache.at < 10 * 60_000) {
-    return { verified: statusCache.ok ? ("yes" as const) : ("no" as const), message: statusCache.message };
-  }
+/**
+ * Checks the configured model works for this key. OpenAI: a free metadata call.
+ * Gemini: a tiny generation, because Google keeps listing models that new keys
+ * can no longer call ("no longer available to new users").
+ */
+async function checkProvider(cfg: ProviderConfig): Promise<{ verified: "yes" | "no" | "unchecked"; message: string }> {
+  const { provider, label, keyVar, modelVar, key, model } = cfg;
+  const cacheKey = `${provider}:${model}:${key.slice(-6)}`;
+  const hit = statusCache.get(cacheKey);
+  if (hit && Date.now() - hit.at < 10 * 60_000) return { verified: hit.ok ? "yes" : "no", message: hit.message };
   try {
     const base = PROVIDERS[provider].base();
     const res =
       provider === "openai"
         ? await fetch(`${base}/models/${encodeURIComponent(model)}`, { headers: { authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(8000) })
-        : await fetch(`${base}/models/${encodeURIComponent(model)}`, { headers: { "x-goog-api-key": key }, signal: AbortSignal.timeout(8000) });
+        : await fetch(`${base}/models/${encodeURIComponent(model)}:generateContent`, {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-goog-api-key": key },
+            body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: "Reply with: ok" }] }], generationConfig: { maxOutputTokens: 16 } }),
+            signal: AbortSignal.timeout(15000),
+          });
     const ok = res.ok;
+    const detail = ok ? "" : scrubSecrets(String((await res.json().catch(() => null))?.error?.message ?? "").split(". ")[0]);
+    const notOpenAiKey = provider === "openai" && !key.startsWith("sk-") ? " It doesn’t look like an OpenAI key (those start with “sk-”)." : "";
     const message = ok
-      ? `Model ${model} is available to this API key.`
+      ? `${label} model ${model} is working with this API key.`
       : res.status === 404
-        ? `Model ${model} was not found for this key. Set ${modelVar} to an available model.`
+        ? `${label} model ${model} can’t be used with this key${detail ? ` (${detail})` : ""}. Set ${modelVar} to an available model.`
         : res.status === 400 || res.status === 401 || res.status === 403
-          ? `The ${keyVar} was rejected by ${label}.`
-          : `${label} returned HTTP ${res.status} while checking the model.`;
-    statusCache = { at: Date.now(), key: cacheKey, ok, message };
-    return { verified: ok ? ("yes" as const) : ("no" as const), message };
+          ? `The ${keyVar} was rejected by ${label}.${notOpenAiKey}`
+          : res.status === 429
+            ? `${label} rate limit or quota reached for this key.`
+            : `${label} returned HTTP ${res.status} while checking the model.`;
+    // Rate limits and quota pass; report them without switching the AI off or caching them.
+    if (res.status === 429) return { verified: "unchecked", message };
+    statusCache.set(cacheKey, { at: Date.now(), ok, message });
+    return { verified: ok ? "yes" : "no", message };
   } catch {
-    return { verified: "unchecked" as const, message: `Could not reach ${label} to verify the model.` };
+    return { verified: "unchecked", message: `Could not reach ${label} to verify the model.` };
   }
+}
+
+/** Status of the primary provider, and of the Gemini fallback when one is configured. */
+export async function verifyModel() {
+  const primary = aiConfig();
+  if (!primary.configured) return { verified: "no" as const, message: "No AI key is set on the server (OPENAI_API_KEY).", fallback: null };
+  const fb = fallbackConfig();
+  const [p, f] = await Promise.all([checkProvider(primary), fb ? checkProvider(fb) : Promise.resolve(null)]);
+  const fallback = fb && f ? { provider: fb.label, model: fb.model, verified: f.verified } : null;
+  if (p.verified === "no" && fb && f && f.verified !== "no") {
+    return { verified: f.verified, message: `${p.message} Reviews will use ${fb.label} (${fb.model}) instead.`, fallback };
+  }
+  const extra = fb && f ? (f.verified === "no" ? ` The ${fb.label} fallback has a problem: ${f.message}` : ` If it fails, ${fb.label} (${fb.model}) is used as a fallback.`) : "";
+  return { verified: p.verified, message: p.message + extra, fallback };
 }
 
 /**
@@ -102,12 +145,12 @@ function httpError(label: string, keyVar: string, modelVar: string, model: strin
   return new AiError("bad_request", `${label} rejected the request (HTTP ${status}).`);
 }
 
-async function send(label: string, url: string, init: RequestInit): Promise<Response> {
+async function send(label: string, url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
   try {
-    return await fetch(url, { ...init, signal: AbortSignal.timeout(60_000) });
+    return await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
   } catch (e) {
     const timeout = e instanceof Error && e.name === "TimeoutError";
-    throw new AiError("unavailable", timeout ? `${label} did not respond within 60 seconds.` : `Could not reach ${label}.`);
+    throw new AiError("unavailable", timeout ? `${label} did not respond within ${Math.round(timeoutMs / 1000)} seconds.` : `Could not reach ${label}.`);
   }
 }
 
@@ -120,10 +163,64 @@ function parse(label: string, text: string | undefined, why?: string) {
   }
 }
 
-/** One structured model call: system instructions, untrusted user content, and the expected output schema. */
-export async function callModel(system: string, user: string, schema: Record<string, unknown>, name = "result"): Promise<{ model: string; json: unknown }> {
-  const { provider, label, keyVar, modelVar, key, model, configured } = aiConfig();
-  if (!configured) throw new AiError("not_configured", `Live AI is not configured (${keyVar} missing).`);
+export interface ModelResult {
+  model: string;
+  /** The service that produced the answer, for the AI disclosure ledger. */
+  service: string;
+  json: unknown;
+  /** Set when the primary provider failed and Gemini answered instead. */
+  fallbackFrom?: { service: string; model: string; error: string };
+}
+
+/**
+ * One structured model call: system instructions, untrusted user content, and
+ * the expected output schema. Falls back to Gemini when OpenAI fails and a
+ * Gemini key is set.
+ */
+// A provider whose key was rejected is skipped for a while, so every call
+// doesn't wait for the same refusal before trying the fallback.
+const rejectedUntil = new Map<string, number>();
+
+/** Clears remembered key rejections and status checks (tests only). */
+export function resetProviderState() {
+  rejectedUntil.clear();
+  statusCache.clear();
+}
+
+export async function callModel(
+  system: string,
+  user: string,
+  schema: Record<string, unknown>,
+  name = "result",
+  /** Total time for the call, fallback included. */
+  budgetMs = 60_000,
+): Promise<ModelResult> {
+  const primary = aiConfig();
+  if (!primary.configured) throw new AiError("not_configured", `Live AI is not configured (${primary.keyVar} missing).`);
+  const fb = fallbackConfig();
+  const deadline = Date.now() + budgetMs;
+  const primaryKey = `${primary.provider}:${primary.key.slice(-6)}`;
+  try {
+    if ((rejectedUntil.get(primaryKey) ?? 0) > Date.now()) throw new AiError("auth_failed", `${primary.label} rejected the ${primary.keyVar}.`);
+    // Leave the fallback at least 40% of the budget.
+    const r = await callProvider(primary, system, user, schema, name, fb ? budgetMs * 0.6 : budgetMs);
+    return { ...r, service: primary.service };
+  } catch (e) {
+    if (e instanceof AiError && e.code === "auth_failed") rejectedUntil.set(primaryKey, Date.now() + 10 * 60_000);
+    const remaining = deadline - Date.now();
+    if (!(e instanceof AiError) || !fb || remaining < 1500) throw e;
+    try {
+      const r = await callProvider(fb, system, user, schema, name, remaining);
+      return { ...r, service: fb.service, fallbackFrom: { service: primary.service, model: primary.model, error: e.message } };
+    } catch (e2) {
+      const code = e2 instanceof AiError ? e2.code : "unavailable";
+      throw new AiError(code, `${e.message} The ${fb.label} fallback also failed: ${e2 instanceof Error ? e2.message : "unknown error"}`);
+    }
+  }
+}
+
+async function callProvider(cfg: ProviderConfig, system: string, user: string, schema: Record<string, unknown>, name: string, timeoutMs: number): Promise<{ model: string; json: unknown }> {
+  const { provider, label, keyVar, modelVar, key, model } = cfg;
   const base = PROVIDERS[provider].base();
 
   if (provider === "openai") {
@@ -142,7 +239,7 @@ export async function callModel(system: string, user: string, schema: Record<str
         max_completion_tokens: 8000,
         ...reasoning,
       }),
-    });
+    }, timeoutMs);
     if (!res.ok) throw httpError(label, keyVar, modelVar, model, res.status, await res.text().catch(() => ""));
     const data = await res.json().catch(() => null);
     const choice = data?.choices?.[0];
@@ -159,9 +256,10 @@ export async function callModel(system: string, user: string, schema: Record<str
       contents: [{ role: "user", parts: [{ text: user }] }],
       generationConfig: { temperature: 0.2, maxOutputTokens: 4096, responseMimeType: "application/json", responseSchema: schema },
     }),
-  });
+  }, timeoutMs);
   if (!res.ok) throw httpError(label, keyVar, modelVar, model, res.status, await res.text().catch(() => ""));
   const data = await res.json().catch(() => null);
   const text: string | undefined = data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("");
-  return { model, json: parse(label, text, data?.promptFeedback?.blockReason || data?.candidates?.[0]?.finishReason) };
+  // Aliases such as gemini-flash-latest report the concrete model that answered.
+  return { model: data?.modelVersion ?? model, json: parse(label, text, data?.promptFeedback?.blockReason || data?.candidates?.[0]?.finishReason) };
 }

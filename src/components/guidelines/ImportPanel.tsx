@@ -61,9 +61,12 @@ export function ImportPanel({ onClose }: { onClose: () => void }) {
       const text = red.text;
       const res = await fetch("/api/guidelines/extract", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }) });
       const data = await res.json().catch(() => null);
+      const fb = data?.ok ? data.fallbackFrom : undefined;
+      if (fb)
+        recordAiCall({ purpose: "rule extraction", service: fb.service, model: fb.model, itemTitle: doc.fileName, sentPreview: text, sentChars: text.length, redactions: red.counts, outcome: "failed", error: fb.error });
       recordAiCall({
         purpose: "rule extraction",
-        service: ai?.service ?? "AI provider",
+        service: data?.service ?? ai?.service ?? "AI provider",
         model: data?.model ?? ai?.model ?? "unknown",
         itemTitle: doc.fileName,
         sentPreview: text,

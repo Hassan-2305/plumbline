@@ -23,7 +23,7 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
-Other commands: `npm test` (48 unit tests), `npm run typecheck`, `npm run lint`, `npm run build`, `npm start`, `npm run demo-assets`.
+Other commands: `npm test` (58 unit tests), `npm run typecheck`, `npm run lint`, `npm run build`, `npm start`, `npm run demo-assets`.
 
 No database, login or API key is required. State lives in browser `localStorage` (key `plumbline-jury:v1`). Use **Reset Demo** (Overview or Settings) to restore the original state.
 
@@ -35,9 +35,17 @@ Create `.env.local` (see `.env.example`):
 |---|---|---|
 | `OPENAI_API_KEY` | for live AI | OpenAI API key. Server-side only. |
 | `OPENAI_MODEL` | no | Defaults to `gpt-5.4-mini`. Use any Chat Completions model with structured outputs that your key can access. |
-| `GEMINI_API_KEY` / `GEMINI_MODEL` | no | Alternative provider, used only when `OPENAI_API_KEY` is empty. Defaults to `gemini-2.5-flash`. |
+| `GEMINI_API_KEY` / `GEMINI_MODEL` | no | Fallback provider: used when `OPENAI_API_KEY` is empty, and retried automatically when an OpenAI call fails (bad key, no quota, rate limit, outage). Both attempts are logged in the AI disclosure ledger. Defaults to `gemini-flash-latest`. |
 
-`/settings` and `GET /api/status` report whether the key is set and whether the model exists for the key (checked with a metadata call, which costs nothing). Quotas and model availability change, so check this after deploying.
+`/settings` and `GET /api/status` report whether the key is set and whether the model works for the key (OpenAI: a free metadata call; Gemini: a tiny generation, because Google still lists models that new keys can no longer call). Results are cached for 10 minutes. Quotas and model availability change, so check this after deploying.
+
+### Keeping the keys secret
+
+- Keys live only in `.env.local` (git-ignored by `.env*`) or the host's environment variables. Never prefix them with `NEXT_PUBLIC_`, which would put them in the browser bundle.
+- Only `src/lib/ai/provider.ts` reads them. It and the other AI modules start with `import "server-only"`, so the build fails if browser code ever imports them. Keys travel in request headers, never in URLs.
+- Provider error text is scrubbed of anything key-like before it reaches the browser, and `/api/status` reports only whether a key works.
+- The AI routes refuse requests from other websites (Origin / `Sec-Fetch-Site`) and allow each client address `AI_RATE_LIMIT` calls per 10 minutes (default 30), so a leaked URL can't run up the bill. Also set a spending limit in your OpenAI and Google accounts.
+- `tests/security.test.ts` checks these rules.
 
 All four juror perspectives go in **one** structured request (OpenAI strict structured outputs, or Gemini `responseSchema`) to keep cost down. Failures (missing key, 401/403, 404 model, 429 rate limit or no quota, refusal, 5xx, timeout, malformed JSON) are shown as failures. Deterministic findings still appear, and no AI result is ever invented.
 

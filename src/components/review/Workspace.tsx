@@ -19,6 +19,8 @@ import type { AiReviewResponse, ContentMeta, ContentType, Finding, Severity } fr
 
 /** The AI route accepts up to 8,000 characters; longer documents get rule-based checks only. */
 const AI_MAX = 8000;
+/** How long the writer waits for the AI before the review finishes with rule-based checks (the server stops at 18 s). */
+const AI_WAIT_MS = 20_000;
 const EMPTY_META: ContentMeta = { hasImage: false, altText: "", fg: "", bg: "" };
 const SEV_RANK: Record<Severity, number> = { high: 3, medium: 2, low: 1 };
 const isOpen = (f: Finding) => f.status === "open" || f.status === "escalated";
@@ -115,10 +117,10 @@ export function Workspace({ itemId, prefill }: { itemId: string | null; prefill?
     // Redact before anything leaves the browser; restore placeholders in the results.
     const red = redact(form.text, brand!.sensitiveTerms);
     const altRed = redact(form.meta.altText, brand!.sensitiveTerms);
-    const ledger = (outcome: "ok" | "failed", model: string, error?: string) =>
+    const ledger = (outcome: "ok" | "failed", model: string, error?: string, service?: string) =>
       recordAiCall({
         purpose: "content review",
-        service: ai?.service ?? "AI provider",
+        service: service ?? ai?.service ?? "AI provider",
         model,
         itemTitle: form.title || "Untitled draft",
         sentPreview: red.text,
@@ -127,9 +129,19 @@ export function Workspace({ itemId, prefill }: { itemId: string | null; prefill?
         outcome,
         error,
       });
+    // The writer is waiting: if the AI is slow or unavailable, finish with the
+    // rule-based findings instead of showing an error. The run is labelled
+    // "Rule-based checks", so nothing claims the AI ran; the AI log keeps the details.
+    const quietFallback = (reason: string, model = ai?.model ?? "unknown") => {
+      ledger("failed", model, reason);
+      commitReview(id, { mode: "deterministic", aiStatus: "skipped" });
+    };
+    const timer = new AbortController();
+    const stop = setTimeout(() => timer.abort(), AI_WAIT_MS);
     try {
       const res = await fetch("/api/review", {
         method: "POST",
+        signal: timer.signal,
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           text: red.text,
@@ -141,7 +153,9 @@ export function Workspace({ itemId, prefill }: { itemId: string | null; prefill?
       });
       const data = (await res.json().catch(() => null)) as AiReviewResponse | null;
       if (data && data.ok) {
-        ledger("ok", data.model);
+        // A failed first attempt was still a request to that provider: log it too.
+        if (data.fallbackFrom) ledger("failed", data.fallbackFrom.model, data.fallbackFrom.error, data.fallbackFrom.service);
+        ledger("ok", data.model, undefined, data.service);
         const findings = data.findings.map((f) => ({
           ...f,
           title: restore(f.title, red.redactions)!,
@@ -153,16 +167,12 @@ export function Workspace({ itemId, prefill }: { itemId: string | null; prefill?
         commitReview(id, { aiFindings: findings, mode: "deterministic+ai", aiStatus: "ok", model: data.model });
         if (data.dropped > 0) setBanner({ tone: "info", text: `${data.dropped} AI finding(s) were discarded because they quoted text not in the draft or were malformed.` });
       } else {
-        const msg = data && !data.ok ? data.error.message : `AI request failed (HTTP ${res.status}).`;
-        ledger("failed", ai?.model ?? "unknown", msg);
-        commitReview(id, { mode: "deterministic", aiStatus: "failed", aiError: msg });
-        setBanner({ tone: "error", text: `AI review failed: ${msg} Rule-based findings are shown; no AI results were recorded.` });
+        quietFallback(data && !data.ok ? data.error.message : `AI request failed (HTTP ${res.status}).`);
       }
     } catch {
-      ledger("failed", ai?.model ?? "unknown", "Network error");
-      commitReview(id, { mode: "deterministic", aiStatus: "failed", aiError: "Network error" });
-      setBanner({ tone: "error", text: "Couldn’t reach the AI review service. Rule-based findings are shown; no AI results were recorded." });
+      quietFallback(timer.signal.aborted ? `No answer within ${AI_WAIT_MS / 1000} seconds` : "Network error");
     } finally {
+      clearTimeout(stop);
       setRunning(false);
       done();
     }

@@ -1,9 +1,13 @@
+import "server-only";
 import type { AiReviewRequest, DraftFinding, FindingCategory, Juror, Severity } from "../types";
 import { JURORS } from "../types";
 import { allVerified, validateEvidence } from "../engine/evidence";
 import { AiError, callModel } from "./provider";
 
 // AI jury review: prompt, output schema, and strict validation of what the model returns.
+
+/** Server-side time limit for the AI part of a review, fallback included. The browser waits slightly longer. */
+export const AI_REVIEW_BUDGET_MS = 18_000;
 
 const CATEGORIES: FindingCategory[] = [
   "tone", "messaging", "guideline_conflict", "banned_term", "preferred_term",
@@ -106,14 +110,14 @@ interface RawFinding {
   confidence?: number;
 }
 
-export async function runAiReview(req: AiReviewRequest): Promise<{ model: string; findings: DraftFinding[]; dropped: number }> {
+export async function runAiReview(req: AiReviewRequest) {
   const { system, user } = buildPrompt(req);
-  const { model, json } = await callModel(system, user, RESPONSE_SCHEMA, "review_findings");
+  const { model, service, fallbackFrom, json } = await callModel(system, user, RESPONSE_SCHEMA, "review_findings", AI_REVIEW_BUDGET_MS);
   const parsed = json as { findings?: RawFinding[] } | null;
   if (!parsed || !Array.isArray(parsed.findings)) {
     throw new AiError("invalid_response", "The AI response did not match the findings schema.");
   }
-  return { model, ...validateAiFindings(parsed.findings, req) };
+  return { model, service, fallbackFrom, ...validateAiFindings(parsed.findings, req) };
 }
 
 /** Exported for tests: strict validation of model output against loaded brand data. */

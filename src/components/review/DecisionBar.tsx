@@ -5,9 +5,11 @@ import Link from "next/link";
 import { useState } from "react";
 import { Badge, Button, Label, Modal, cx, inputCls } from "@/components/ui";
 import { Avatar } from "@/components/content/ContentList";
-import { approvalRights, decideApproval, setAssignee, submitForApproval } from "@/lib/store";
+import { approvalRights, decideApproval, setAssignee, setRole, submitForApproval } from "@/lib/store";
 import { can, roleMeta } from "@/lib/roles";
 import type { ContentItem, ContentStatus, Role } from "@/lib/types";
+
+const firstName = (r: Role) => roleMeta(r).person.replace(/\s*\(.*\)/, "");
 
 const STEPS: { status: ContentStatus; label: string }[] = [
   { status: "draft", label: "Draft" },
@@ -161,7 +163,22 @@ export function DecisionBar({
       </div>
       {canDecide && rights!.reason && !needsOverride && <p className="mt-2 text-[12px] text-amber-800">{rights!.reason}</p>}
       {item && status === "ready_for_approval" && !can(role, "content.approve") && (
-        <p className="mt-2 text-[12px] text-stone-500">Waiting for {roleMeta(item.assignee ?? "manager").person} to decide.</p>
+        // Everyone in this prototype shares one browser, so nobody else will ever act on it:
+        // make switching to the approver the obvious next step.
+        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-accent-200 bg-accent-50/70 px-4 py-3">
+          <Avatar role={item.assignee ?? "manager"} size={28} />
+          <div className="min-w-0 flex-1 text-[13px]">
+            <p className="font-medium text-stone-900">
+              Waiting for {roleMeta(item.assignee ?? "manager").person} to approve v{latest?.number ?? 1}
+            </p>
+            <p className="text-stone-600">
+              {roleMeta(role).person} can’t approve. In this demo you play every role, so switch to {firstName(item.assignee ?? "manager")} to make the decision.
+            </p>
+          </div>
+          <Button variant="primary" size="sm" onClick={() => setRole(item.assignee ?? "manager")}>
+            <ShieldCheck size={13} /> Switch to {firstName(item.assignee ?? "manager")}
+          </Button>
+        </div>
       )}
 
       <Modal

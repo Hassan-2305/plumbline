@@ -2,6 +2,8 @@ import { analyzeConflicts } from "@/lib/ai/conflicts";
 import { AiError } from "@/lib/ai/provider";
 import type { ConflictAnalysisRequest, ConflictAnalysisResponse } from "@/lib/types";
 
+import { guardAiRequest } from "@/lib/ai/guard";
+
 export const dynamic = "force-dynamic";
 
 function fail(code: Extract<ConflictAnalysisResponse, { ok: false }>["error"]["code"], message: string, status: number) {
@@ -9,6 +11,8 @@ function fail(code: Extract<ConflictAnalysisResponse, { ok: false }>["error"]["c
 }
 
 export async function POST(request: Request) {
+  const blocked = guardAiRequest(request);
+  if (blocked) return blocked;
   let body: ConflictAnalysisRequest;
   try {
     body = await request.json();

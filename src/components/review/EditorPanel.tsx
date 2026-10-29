@@ -107,7 +107,7 @@ function PrivacyControls({
         <input type="checkbox" className="mt-0.5" disabled={!aiAvailable || confidential} checked={aiOn} onChange={(e) => onUseAi(e.target.checked)} />
         <span>
           <span className="flex items-center gap-1 font-medium">
-            <Sparkles size={12} /> AI jurors {ai?.configured ? `(Gemini · ${ai.model})` : ""}
+            <Sparkles size={12} /> AI jurors {ai?.configured ? `(${ai.provider} · ${ai.model})` : ""}
           </span>
           <span className="block text-xs text-stone-500">
             {confidential
@@ -118,7 +118,7 @@ function PrivacyControls({
                   ? "Not configured on this deployment. Rule-based checks still run."
                   : ai.verified === "no"
                     ? ai.message
-                    : "Redacted text goes to Google’s Gemini API and is logged in Settings."}
+                    : `Redacted text goes to the ${ai?.service ?? "AI provider"} and is logged in Settings.`}
           </span>
         </span>
       </label>

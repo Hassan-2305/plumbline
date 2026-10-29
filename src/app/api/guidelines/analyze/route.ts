@@ -1,5 +1,5 @@
 import { analyzeConflicts } from "@/lib/ai/conflicts";
-import { AiError } from "@/lib/ai/gemini";
+import { AiError } from "@/lib/ai/provider";
 import type { ConflictAnalysisRequest, ConflictAnalysisResponse } from "@/lib/types";
 
 export const dynamic = "force-dynamic";

@@ -505,6 +505,10 @@ export type AiReviewResponse =
 
 export interface AiStatusResponse {
   configured: boolean;
+  /** Display name of the active provider, e.g. "OpenAI". */
+  provider: string;
+  /** Name used in the AI disclosure ledger, e.g. "OpenAI API". */
+  service: string;
   model: string;
   verified: "yes" | "no" | "unchecked";
   message: string;

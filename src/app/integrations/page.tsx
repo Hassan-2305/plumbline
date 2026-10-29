@@ -40,14 +40,14 @@ export default function IntegrationsPage() {
       <ul className="divide-y divide-stone-200 border-y border-stone-200">
         <Row
           icon={<Sparkles size={15} />}
-          name="Google Gemini"
+          name={ai?.provider ?? "AI provider"}
           status={
             !ai ? <Badge>Checking</Badge> : ai.configured && ai.verified !== "no" ? <Badge tone="green">Connected</Badge> : ai.configured ? <Badge tone="red">Problem</Badge> : <Badge>Not configured</Badge>
           }
         >
           <p>Optional AI jurors, guideline conflict analysis and rule extraction. Model: <span className="font-mono text-xs">{ai?.model || "—"}</span>.</p>
           <p className="mt-1 text-xs text-stone-500">
-            {ai?.message} The key lives in server environment variables (GEMINI_API_KEY, GEMINI_MODEL) and is never sent to the browser. Every request is redacted and logged in{" "}
+            {ai?.message} The key lives in server environment variables (OPENAI_API_KEY, OPENAI_MODEL) and is never sent to the browser. Every request is redacted and logged in{" "}
             <Link href="/settings" className="text-accent-700 hover:underline">Settings</Link>.
           </p>
         </Row>

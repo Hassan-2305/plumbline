@@ -19,7 +19,7 @@ flowchart LR
     Status[/api/status/]
     Val[Output validation<br/>src/lib/ai/*]
   end
-  Gemini[(Google Gemini API<br/>optional)]
+  LLM[(OpenAI API, or Gemini<br/>optional)]
 
   UI --> Store
   UI --> Det
@@ -27,8 +27,8 @@ flowchart LR
   UI --> Impact
   Impact --> Det
   UI -- redacted text only --> Red --> Review & Analyze & Extract
-  Review & Analyze & Extract --> Val --> Gemini
-  Status --> Gemini
+  Review & Analyze & Extract --> Val --> LLM
+  Status --> LLM
 ```
 
 ## Main flows
@@ -56,7 +56,7 @@ flowchart LR
 
 | Item | Use | Cost |
 |---|---|---|
-| Google Gemini API (`GEMINI_MODEL`, default `gemini-2.5-flash`) | Optional AI jurors, conflict analysis, rule extraction | Free tier; optional |
+| OpenAI API (`OPENAI_MODEL`, default `gpt-5.4-mini`); Gemini used instead only if no OpenAI key | Optional AI jurors, conflict analysis, rule extraction | Pay per use; optional |
 | Next.js 16, React 19, TypeScript | App framework | Free |
 | Tailwind CSS 4, lucide-react, Recharts | UI, icons, charts | Free |
 | pdfjs-dist | PDF text extraction in the browser | Free |
@@ -73,7 +73,7 @@ No datasets were used. All demo data (Northstar Nutrition, Aurora Coffee, facts,
 |---|---|
 | `src/lib/types.ts` | Shared contracts |
 | `src/lib/engine/*` | Rule-based checks, evidence, conflicts, coordinator, diff, contrast and colour, impact replay |
-| `src/lib/ai/*` | Gemini client, prompts and output validation (server only) |
+| `src/lib/ai/*` | Provider client (OpenAI or Gemini), prompts and output validation (server only) |
 | `src/lib/privacy/redact.ts` | Redaction and restoration |
 | `src/lib/image`, `src/lib/video`, `src/lib/import` | Media and document readers |
 | `src/lib/store.ts` | State, persistence, migrations and permission-checked actions |

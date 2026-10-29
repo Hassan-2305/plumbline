@@ -1,53 +1,9 @@
-import type { AiErrorCode, AiReviewRequest, DraftFinding, FindingCategory, Juror, Severity } from "../types";
+import type { AiReviewRequest, DraftFinding, FindingCategory, Juror, Severity } from "../types";
 import { JURORS } from "../types";
 import { allVerified, validateEvidence } from "../engine/evidence";
+import { AiError, callModel } from "./provider";
 
-// Server-only Gemini client. The API key never leaves the server.
-
-// GEMINI_API_BASE is only for pointing tests at a local mock.
-const API = process.env.GEMINI_API_BASE?.trim() || "https://generativelanguage.googleapis.com/v1beta";
-export const DEFAULT_MODEL = "gemini-2.5-flash";
-
-export function aiConfig() {
-  const key = process.env.GEMINI_API_KEY?.trim() || "";
-  const model = process.env.GEMINI_MODEL?.trim() || DEFAULT_MODEL;
-  return { key, model, configured: key.length > 0 };
-}
-
-export class AiError extends Error {
-  constructor(public code: AiErrorCode, message: string) {
-    super(message);
-  }
-}
-
-let statusCache: { at: number; model: string; ok: boolean; message: string } | null = null;
-
-/** Checks the configured model exists for this key (metadata call, no generation quota). */
-export async function verifyModel() {
-  const { key, model, configured } = aiConfig();
-  if (!configured) return { verified: "no" as const, message: "GEMINI_API_KEY is not set on the server." };
-  if (statusCache && statusCache.model === model && Date.now() - statusCache.at < 10 * 60_000) {
-    return { verified: statusCache.ok ? ("yes" as const) : ("no" as const), message: statusCache.message };
-  }
-  try {
-    const res = await fetch(`${API}/models/${encodeURIComponent(model)}`, {
-      headers: { "x-goog-api-key": key },
-      signal: AbortSignal.timeout(8000),
-    });
-    const ok = res.ok;
-    const message = ok
-      ? `Model ${model} is available to this API key.`
-      : res.status === 404
-        ? `Model ${model} was not found for this key. Set GEMINI_MODEL to an available model.`
-        : res.status === 400 || res.status === 403
-          ? "The API key was rejected by Gemini."
-          : `Gemini returned HTTP ${res.status} while checking the model.`;
-    statusCache = { at: Date.now(), model, ok, message };
-    return { verified: ok ? ("yes" as const) : ("no" as const), message };
-  } catch {
-    return { verified: "unchecked" as const, message: "Could not reach Gemini to verify the model." };
-  }
-}
+// AI jury review: prompt, output schema, and strict validation of what the model returns.
 
 const CATEGORIES: FindingCategory[] = [
   "tone", "messaging", "guideline_conflict", "banned_term", "preferred_term",
@@ -150,64 +106,12 @@ interface RawFinding {
   confidence?: number;
 }
 
-/** One structured Gemini call. Throws AiError for every failure — never returns fake output. */
-export async function callGemini(system: string, user: string, schema: object): Promise<{ model: string; json: unknown }> {
-  const { key, model, configured } = aiConfig();
-  if (!configured) throw new AiError("not_configured", "Live AI is not configured (GEMINI_API_KEY missing).");
-
-  let res: Response;
-  try {
-    res = await fetch(`${API}/models/${encodeURIComponent(model)}:generateContent`, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-goog-api-key": key },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
-        contents: [{ role: "user", parts: [{ text: user }] }],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 4096,
-          responseMimeType: "application/json",
-          responseSchema: schema,
-        },
-      }),
-      signal: AbortSignal.timeout(45_000),
-    });
-  } catch (e) {
-    const timeout = e instanceof Error && e.name === "TimeoutError";
-    throw new AiError("unavailable", timeout ? "Gemini did not respond within 45 seconds." : "Could not reach Gemini.");
-  }
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    if (res.status === 429) throw new AiError("rate_limited", "Gemini free-tier rate limit or quota reached. Try again shortly.");
-    if (res.status === 401 || res.status === 403 || /API key not valid/i.test(body))
-      throw new AiError("auth_failed", "Gemini rejected the API key.");
-    if (res.status === 404) throw new AiError("bad_request", `Model "${model}" is not available for this key. Set GEMINI_MODEL.`);
-    if (res.status >= 500) throw new AiError("unavailable", `Gemini is unavailable (HTTP ${res.status}).`);
-    throw new AiError("bad_request", `Gemini rejected the request (HTTP ${res.status}).`);
-  }
-
-  const data = await res.json().catch(() => null);
-  const text: string | undefined = data?.candidates?.[0]?.content?.parts
-    ?.map((p: { text?: string }) => p.text ?? "")
-    .join("");
-  if (!text) {
-    const reason = data?.promptFeedback?.blockReason || data?.candidates?.[0]?.finishReason;
-    throw new AiError("invalid_response", `Gemini returned no usable output${reason ? ` (${reason})` : ""}.`);
-  }
-  try {
-    return { model, json: JSON.parse(text) };
-  } catch {
-    throw new AiError("invalid_response", "Gemini returned malformed JSON. No AI results were recorded.");
-  }
-}
-
-export async function runGeminiReview(req: AiReviewRequest): Promise<{ model: string; findings: DraftFinding[]; dropped: number }> {
+export async function runAiReview(req: AiReviewRequest): Promise<{ model: string; findings: DraftFinding[]; dropped: number }> {
   const { system, user } = buildPrompt(req);
-  const { model, json } = await callGemini(system, user, RESPONSE_SCHEMA);
+  const { model, json } = await callModel(system, user, RESPONSE_SCHEMA, "review_findings");
   const parsed = json as { findings?: RawFinding[] } | null;
   if (!parsed || !Array.isArray(parsed.findings)) {
-    throw new AiError("invalid_response", "Gemini response did not match the findings schema.");
+    throw new AiError("invalid_response", "The AI response did not match the findings schema.");
   }
   return { model, ...validateAiFindings(parsed.findings, req) };
 }

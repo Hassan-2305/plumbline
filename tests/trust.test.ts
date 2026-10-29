@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { redact, restore } from "@/lib/privacy/redact";
-import { validateAiFindings } from "@/lib/ai/gemini";
+import { validateAiFindings } from "@/lib/ai/review";
 import { validateEvidence } from "@/lib/engine/evidence";
 import { can } from "@/lib/roles";
 import { NORTHSTAR } from "@/lib/seed/brand";

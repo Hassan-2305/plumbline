@@ -40,7 +40,7 @@ export function ConflictAnalysis({ state }: { state: AppState }) {
       const log = (outcome: "ok" | "failed", model: string, error?: string) =>
         recordAiCall({
           purpose: "conflict analysis",
-          service: "Google Gemini API",
+          service: ai?.service ?? "AI provider",
           model,
           sentPreview: sent.map((r) => `${r.id}: ${r.text}`).join("\n"),
           sentChars: sent.reduce((n, r) => n + r.text.length, 0),
@@ -63,7 +63,7 @@ export function ConflictAnalysis({ state }: { state: AppState }) {
         setAiError(msg);
       }
     } catch {
-      recordAiCall({ purpose: "conflict analysis", service: "Google Gemini API", model: ai?.model ?? "unknown", sentPreview: "", sentChars: 0, redactions: [], outcome: "failed", error: "Network error" });
+      recordAiCall({ purpose: "conflict analysis", service: ai?.service ?? "AI provider", model: ai?.model ?? "unknown", sentPreview: "", sentChars: 0, redactions: [], outcome: "failed", error: "Network error" });
       setAiError("Could not reach the analysis service.");
     } finally {
       setBusy(false);
@@ -103,9 +103,9 @@ export function ConflictAnalysis({ state }: { state: AppState }) {
         )}
       </div>
       {!aiReady && ai && (
-        <p className="mt-1.5 text-[11px] text-stone-500">AI analysis needs GEMINI_API_KEY on the server. The deterministic check works without it.</p>
+        <p className="mt-1.5 text-[11px] text-stone-500">AI analysis needs OPENAI_API_KEY on the server. The deterministic check works without it.</p>
       )}
-      {aiReady && <p className="mt-1.5 text-[11px] text-stone-500">AI analysis sends the rule text to Google’s Gemini API.</p>}
+      {aiReady && <p className="mt-1.5 text-[11px] text-stone-500">AI analysis sends the rule text to the {ai?.service ?? "AI provider"}.</p>}
 
       {lexical && (
         <div className="mt-4 space-y-2">

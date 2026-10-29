@@ -4,7 +4,7 @@ Evidence-backed brand review for marketing content.
 
 > Every objection needs evidence. Every fix needs human consent. Every approval leaves a history.
 
-Four jurors (Brand Guardian, Fact-Checker, Risk & Compliance, Accessibility Advocate) review drafts against a brand's rules and approved facts. Deterministic checks run first and work offline. Optional Gemini jurors add judgement. Every evidence reference is re-validated against the loaded rules and facts before it is shown. Humans accept, edit, dismiss or escalate each finding, and a simulated reviewer approves versions. Dismissal patterns feed **Guideline Intelligence**, which surfaces confusing or conflicting rules and proposes clarifications for human approval.
+Four jurors (Brand Guardian, Fact-Checker, Risk & Compliance, Accessibility Advocate) review drafts against a brand's rules and approved facts. Deterministic checks run first and work offline. Optional AI jurors (OpenAI by default) add judgement. Every evidence reference is re-validated against the loaded rules and facts before it is shown. Humans accept, edit, dismiss or escalate each finding, and a simulated reviewer approves versions. Dismissal patterns feed **Guideline Intelligence**, which surfaces confusing or conflicting rules and proposes clarifications for human approval.
 
 The demo brand **Northstar Nutrition** and all of its facts and history are **fictional**.
 
@@ -23,7 +23,7 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
-Other commands: `npm test` (42 unit tests), `npm run typecheck`, `npm run lint`, `npm run build`, `npm start`, `npm run demo-assets`.
+Other commands: `npm test` (48 unit tests), `npm run typecheck`, `npm run lint`, `npm run build`, `npm start`, `npm run demo-assets`.
 
 No database, login or API key is required. State lives in browser `localStorage` (key `plumbline-jury:v1`). Use **Reset Demo** (Overview or Settings) to restore the original state.
 
@@ -33,20 +33,21 @@ Create `.env.local` (see `.env.example`):
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `GEMINI_API_KEY` | for live AI | Google AI Studio key. Server-side only. |
-| `GEMINI_MODEL` | no | Defaults to `gemini-2.5-flash`. Use any `generateContent` model your key can access. |
+| `OPENAI_API_KEY` | for live AI | OpenAI API key. Server-side only. |
+| `OPENAI_MODEL` | no | Defaults to `gpt-5.4-mini`. Use any Chat Completions model with structured outputs that your key can access. |
+| `GEMINI_API_KEY` / `GEMINI_MODEL` | no | Alternative provider, used only when `OPENAI_API_KEY` is empty. Defaults to `gemini-2.5-flash`. |
 
-`/settings` and `GET /api/status` report whether the key is set and whether the model exists for the key (checked with a metadata call, which uses no generation quota). Free-tier quotas and model availability change, so check this after deploying.
+`/settings` and `GET /api/status` report whether the key is set and whether the model exists for the key (checked with a metadata call, which costs nothing). Quotas and model availability change, so check this after deploying.
 
-All four juror perspectives go in **one** structured Gemini request to save quota. Failures (missing key, 401/403, 404 model, 429 rate limit, 5xx, timeout, malformed JSON) are shown as failures. Deterministic findings still appear, and no AI result is ever invented.
+All four juror perspectives go in **one** structured request (OpenAI strict structured outputs, or Gemini `responseSchema`) to keep cost down. Failures (missing key, 401/403, 404 model, 429 rate limit or no quota, refusal, 5xx, timeout, malformed JSON) are shown as failures. Deterministic findings still appear, and no AI result is ever invented.
 
-When live AI is used, the draft text, its metadata and the brand's rules and facts are sent to Google's Gemini API. Don't submit confidential content.
+When live AI is used, the draft text, its metadata and the brand's rules and facts are sent to the active provider after emails, phone numbers, card numbers, secrets and the brand's sensitive terms are masked. Items marked confidential are never sent, and every call is logged in the AI disclosure ledger.
 
 ## Deploy (Vercel free tier)
 
 1. Push this folder to a GitHub repository.
 2. On vercel.com, choose **Add New → Project** and import the repository. The framework is detected as Next.js; keep the defaults.
-3. Optional: add `GEMINI_API_KEY` (and `GEMINI_MODEL`) under **Settings → Environment Variables**, then redeploy.
+3. Optional: add `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`) under **Settings → Environment Variables**, then redeploy.
 4. Open `/settings` on the deployed URL to confirm the AI status.
 
 Alternatively, run `npx vercel` from this folder and follow the prompts.
@@ -55,7 +56,7 @@ Alternatively, run `npx vercel` from this folder and follow the prompts.
 
 - **First run**: the demo brand, 10 rules, 6 facts (active, expired and pending) and 5 labelled seeded review items load automatically. **Try Demo** opens a reviewed example in one click.
 - **Deterministic checks** (`src/lib/engine/deterministic.ts`): banned terms, preferred terms, expired or pending facts, exact and key-figure fact matching, numerical claims (unsupported, or contradicting an approved fact), clinical-claim phrases, absolute guarantees, superlatives, tone vs the conflicting tone rules, long sentences, all-caps runs, missing or weak alt text, real WCAG contrast ratio and off-palette colours.
-- **AI jurors** (`src/lib/ai/gemini.ts`): a structured JSON schema and prompt-injection framing (content is wrapped as untrusted data). Server-side validation drops findings that quote text not present in the draft, marks findings citing non-existent rule or fact IDs as **Unverified**, and replaces every excerpt with the source record text.
+- **AI jurors** (`src/lib/ai/review.ts`, provider client in `src/lib/ai/provider.ts`): a structured JSON schema and prompt-injection framing (content is wrapped as untrusted data). Server-side validation drops findings that quote text not present in the draft, marks findings citing non-existent rule or fact IDs as **Unverified**, and replaces every excerpt with the source record text.
 - **Coordinator** (`src/lib/engine/coordinator.ts`): merges duplicates, marks corroboration, and keeps disagreements in severity with a note.
 - **Findings UI**: grouped by source (Deterministic / AI-assisted / Seeded demo results) and then by juror. Each finding shows evidence panels, explanation, suggested fix, a before/after preview, model-reported confidence (labelled as not calibrated) and decision history.
 - **Fixes**: Accept (minimal local replacement), Edit, Dismiss (reason required), Escalate and Reopen. Each applied fix creates a new version.
@@ -64,7 +65,7 @@ Alternatively, run `npx vercel` from this folder and follow the prompts.
 - **Guideline Intelligence**: a lexicon conflict detector finds R-001 ↔ R-009. The app shows both rules, the reason they conflict, example context, review statistics and an editable proposed clarification. Approving it versions the rule and keeps the old text. You can also paste guideline text to analyse it for conflicts.
 - **Insights**: review runs, open and high-risk findings, most flagged rules, most dismissed rules, dismissal reasons and potentially confusing guidelines with example notes and suggested improvements. Seeded history can be toggled off.
 - **Guideline management**: anyone can propose a rule edit, a new rule, or a banned or preferred term with a reason. Only the reviewer role can approve or reject, and the queue shows a word diff for each edit. Approved edits version the rule and keep the old text. New facts start as pending and must be approved before they can support claims; reviewers can re-verify a fact and set a new expiry. Every applied change goes into the brand change log.
-- **AI guideline analysis** (`src/lib/ai/conflicts.ts`, `POST /api/guidelines/analyze`): Gemini looks for conflicts across the current rules plus any pasted text. Results citing rule IDs that don't exist are discarded. A conflict between existing rules can be added to Guideline Intelligence, labelled as an AI proposal.
+- **AI guideline analysis** (`src/lib/ai/conflicts.ts`, `POST /api/guidelines/analyze`): the AI looks for conflicts across the current rules plus any pasted text. Results citing rule IDs that don't exist are discarded. A conflict between existing rules can be added to Guideline Intelligence, labelled as an AI proposal.
 - **Image checks** (`src/lib/image/analyze.ts`, browser-only): upload or drop PNG, JPEG, WebP, GIF or SVG files up to 5 MB, or use the bundled demo images (approved logo, stretched logo, off-brand banner). The app reads the file metadata, extracts the dominant colours and compares them with the palette (CIE76 ΔE), and computes a 64-bit perceptual hash (dHash). It flags off-palette images, logo files that don't match the reference (whole-file comparison) and logo files whose proportions differ by more than 3% from the reference (possible stretching). Alt text that is just a file name is flagged. Images are never sent to the AI.
 - **Document review**: import a PDF, Word (.docx), TXT or Markdown file as the content to review (or use the sample sell sheet). Text is extracted in the browser, and findings in multi-page PDFs show their page. Documents over 8,000 characters get rule-based checks only.
 - **Comments, roles and permissions**: see "The three improvements" above.
@@ -89,7 +90,7 @@ Alternatively, run `npx vercel` from this folder and follow the prompts.
 - localStorage is prototype persistence. It is not secure, not multi-user and not a tamper-proof audit trail.
 - Roles are simulated (Creator, Manager, Reviewer) with no authentication; permissions are enforced in client-side state only. Approval applies only inside this app and cannot stop publication elsewhere.
 - Exact and lexical matching is not semantic verification. A paraphrase may be valid, and an exact match may still mislead in context.
-- The deterministic conflict check only catches opposing terms. AI conflict analysis needs a Gemini key.
+- The deterministic conflict check only catches opposing terms. AI conflict analysis needs an API key.
 - Image checks are measurements, not understanding. Nothing identifies what an image depicts, finds a logo inside a larger image, or checks logo clear space. Logo comparison works on whole logo files only.
 - Video checks are limited to sampled frames and captions. Audio is not transcribed, there's no frame-by-frame or flashing-content analysis, and on-screen text is not read.
 - Scanned (image-only) PDFs can't be imported because there's no OCR. Pattern extraction can miss rules phrased unusually; AI suggestions help when a key is configured.
@@ -98,7 +99,7 @@ Alternatively, run `npx vercel` from this folder and follow the prompts.
 
 ## Testing notes
 
-- `scripts/mock-gemini.mjs` is a local mock of the Gemini API. Start it with `node scripts/mock-gemini.mjs`, then run the app with `GEMINI_API_KEY=test GEMINI_API_BASE=http://localhost:3999`. Switch modes with `curl -X POST localhost:3999/mode -d ok|fakeids|badjson|ratelimit|down`. The mock answers both the review and the guideline-analysis endpoints.
+- `scripts/mock-gemini.mjs` is a local mock of the Gemini API. Start it with `node scripts/mock-gemini.mjs`, then run the app with `GEMINI_API_KEY=test GEMINI_API_BASE=http://localhost:3999`. Switch modes with `curl -X POST localhost:3999/mode -d ok|fakeids|badjson|ratelimit|down`. The mock answers both the review and the guideline-analysis endpoints. The OpenAI path is covered by `tests/provider.test.ts`, which stubs the API.
 - Brand-book path to rehearse: brand switcher → New brand… → "Empty" → Rules tab → Import brand book → Use sample brand book → Propose → switch to Reviewer → Conflicts & proposals → approve. Expect 12 rules and a detected R-001 ↔ R-002 tone conflict. Import again to add the banned and preferred terms.
 - Video path to rehearse: Northstar → new review → Media & accessibility → Content includes a video → Use demo video + captions → Run Jury Review. Expect findings for off-palette frames at 00:04 and 00:05, "miracle formula" and a clinical claim in the captions at 00:03, and fast captions.
 - Demo assets (`public/demo/aurora-brand-book.pdf`, `northstar-promo.mp4`, `northstar-promo.vtt`) are fictional and generated by `node scripts/make-demo-assets.mjs`. The video step needs ffmpeg. `public/pdf.worker.min.mjs` is copied from `pdfjs-dist`; copy it again after upgrading that package.

@@ -4,7 +4,7 @@
 
 | Member | Planned role | Modules owned | Confirmed contribution (fill in) |
 |---|---|---|---|
-| Rahil | Backend, AI orchestration | Rule-based engine (`src/lib/engine/*`), Gemini client and output validation (`src/lib/ai/*`), API routes, redaction (`src/lib/privacy/*`), Test this change (`engine/impact.ts`) | |
+| Rahil | Backend, AI orchestration | Rule-based engine (`src/lib/engine/*`), AI provider client (OpenAI/Gemini) and output validation (`src/lib/ai/*`), API routes, redaction (`src/lib/privacy/*`), Test this change (`engine/impact.ts`) | |
 | Hassan | Frontend and workflow | Review workspace, findings, fixes, versions, comments, the three-role approval workflow, brands, guided tour (`src/components/review`, `brands`, `tour`, `src/lib/store.ts`, `src/lib/roles.ts`) | |
 | Niveth | Media, accessibility, intelligence | Image, video and document readers (`src/lib/image`, `video`, `import`), contrast and colour, Guideline Intelligence, Insights, AI ledger UI | |
 | Nithin | Data, QA, docs | Demo brands and seed data, demo assets (`scripts/make-demo-assets.mjs`), unit tests (`tests/*`), usability testing, README and `docs/*`, demo video | |

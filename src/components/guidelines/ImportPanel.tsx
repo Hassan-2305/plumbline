@@ -63,7 +63,7 @@ export function ImportPanel({ onClose }: { onClose: () => void }) {
       const data = await res.json().catch(() => null);
       recordAiCall({
         purpose: "rule extraction",
-        service: "Google Gemini API",
+        service: ai?.service ?? "AI provider",
         model: data?.model ?? ai?.model ?? "unknown",
         itemTitle: doc.fileName,
         sentPreview: text,
@@ -179,7 +179,7 @@ export function ImportPanel({ onClose }: { onClose: () => void }) {
               {busy === "ai" ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} Suggest more with AI
             </Button>
           </div>
-          {aiReady && <p className="-mt-2 text-[11px] text-stone-500">AI suggestions send the document text to Google’s Gemini API. Each suggestion must quote the document verbatim.</p>}
+          {aiReady && <p className="-mt-2 text-[11px] text-stone-500">AI suggestions send the document text to the {ai?.service ?? "AI provider"}. Each suggestion must quote the document verbatim.</p>}
           {aiNote && <p className="text-xs text-stone-600">{aiNote}</p>}
           {colours.length > 0 && (
             <p className="flex flex-wrap items-center gap-2 text-xs text-stone-600">

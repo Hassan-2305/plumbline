@@ -1,4 +1,5 @@
-import { AiError, runGeminiReview } from "@/lib/ai/gemini";
+import { AiError } from "@/lib/ai/provider";
+import { runAiReview } from "@/lib/ai/review";
 import type { AiReviewRequest, AiReviewResponse } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
     return fail("bad_request", "Brand rules and facts are required.", 400);
   }
   try {
-    const result = await runGeminiReview(body);
+    const result = await runAiReview(body);
     return Response.json({ ok: true, ...result } satisfies AiReviewResponse);
   } catch (e) {
     if (e instanceof AiError) {

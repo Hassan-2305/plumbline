@@ -118,7 +118,7 @@ export function Workspace({ itemId, prefill }: { itemId: string | null; prefill?
     const ledger = (outcome: "ok" | "failed", model: string, error?: string) =>
       recordAiCall({
         purpose: "content review",
-        service: "Google Gemini API",
+        service: ai?.service ?? "AI provider",
         model,
         itemTitle: form.title || "Untitled draft",
         sentPreview: red.text,

@@ -15,9 +15,12 @@ CI (`.github/workflows/ci.yml`) runs all four on every push.
 |---|---|
 | `tests/engine.test.ts` | WCAG contrast matches reference ratios. Demo scenarios A/B/C produce the expected findings, evidence IDs and minimal fixes. "Unsupported" isn't called "false". The R-001/R-009 conflict is raised, not resolved. Rule roles cite the right brand's rules. Captions are checked with timestamps. Text, diff and colour helpers work. The coordinator merges corroboration and keeps disagreements. |
 | `tests/trust.test.ts` | Redaction masks emails, phones, cards, secrets and confidential terms, restores them, and leaves ordinary marketing numbers alone. AI output validation drops quotes not in the content, marks invented IDs **Unverified**, clamps confidence and rejects unknown jurors. Evidence excerpts are replaced with real rule text. The permission matrix is correct. |
+| `tests/provider.test.ts` | OpenAI is chosen when its key is set (Gemini otherwise); the strict structured-output schema is built correctly; the key is sent only in the Authorization header; 401, no-quota and refusal responses become errors, never results; a full `/api/review` round trip drops an invented quote and verifies a real rule citation. |
 | `tests/features.test.ts` | **Test this change**: the R-009 clarification removes only dismissed noise and is "safe"; weakening terminology loses accepted issues and is "risky"; a new banned term breaks approved content; no change means no impact. Caption parsing (VTT and SRT). Brand-book rule, term and colour extraction. Document page mapping. |
 
 ## Failure-mode checks (run against a local Gemini mock)
+
+The OpenAI client is covered by `tests/provider.test.ts`: provider selection, the strict structured-output schema, the request shape (key only in the Authorization header), 401 / no-quota / refusal errors, and a full `/api/review` round trip whose invented quote is dropped and whose rule citation is verified.
 
 `scripts/mock-gemini.mjs` imitates the Gemini API. Start the app with `GEMINI_API_KEY=test GEMINI_API_BASE=http://localhost:3999` and switch modes with `curl -X POST localhost:3999/mode -d <mode>`.
 

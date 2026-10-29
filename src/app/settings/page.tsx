@@ -33,7 +33,7 @@ export default function SettingsPage() {
         <Card className="p-5 space-y-3 text-sm">
           <div className="flex items-center gap-2">
             <Sparkles size={16} />
-            <span className="font-medium">Google Gemini</span>
+            <span className="font-medium">{ai?.provider ?? "AI provider"}</span>
             {!ai ? (
               <Badge>Checking…</Badge>
             ) : ai.configured && ai.verified !== "no" ? (
@@ -53,15 +53,15 @@ export default function SettingsPage() {
             </dl>
           )}
           <p className="text-stone-600">
-            The API key lives only in server environment variables (<code className="text-xs bg-stone-100 px-1 rounded">GEMINI_API_KEY</code>, optional{" "}
-            <code className="text-xs bg-stone-100 px-1 rounded">GEMINI_MODEL</code>). It is never sent to the browser and cannot be entered here.
+            The API key lives only in server environment variables (<code className="text-xs bg-stone-100 px-1 rounded">OPENAI_API_KEY</code>, optional{" "}
+            <code className="text-xs bg-stone-100 px-1 rounded">OPENAI_MODEL</code>; <code className="text-xs bg-stone-100 px-1 rounded">GEMINI_API_KEY</code> is used only if no OpenAI key is set). It is never sent to the browser and cannot be entered here.
           </p>
           <p className="text-stone-600">
             Without a key, deterministic checks and the labelled seeded demo results still work. Failed AI calls are reported as failures — never shown as AI results.
           </p>
           <p className="text-stone-600">
-            <strong>Data handling:</strong> when live AI is used, the draft text, its metadata and the brand’s rules and facts are sent to Google’s Gemini API. Free-tier
-            terms may allow the provider to use submitted data. Do not submit confidential content.
+            <strong>Data handling:</strong> when live AI is used, the draft text, its metadata and the brand’s rules and facts are sent to the{" "}
+            {ai?.service ?? "AI provider"}, after emails, phone numbers and the brand’s sensitive terms are masked. Check the provider’s data-retention terms before sending anything sensitive; items marked confidential are never sent.
           </p>
         </Card>
       </section>

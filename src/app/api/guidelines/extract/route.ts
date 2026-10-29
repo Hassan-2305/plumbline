@@ -1,4 +1,4 @@
-import { AiError } from "@/lib/ai/gemini";
+import { AiError } from "@/lib/ai/provider";
 import { extractRulesWithAi } from "@/lib/ai/extract";
 
 export const dynamic = "force-dynamic";

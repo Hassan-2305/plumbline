@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, ChevronsUpDown, Compass, Menu, Scale, Search, X } from "lucide-react";
+import { Check, ChevronsUpDown, Compass, Menu, Search, X } from "lucide-react";
+import { LogoMark } from "./Logo";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -147,9 +148,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col">
       <Link href="/" onClick={onNavigate} className="flex items-center gap-2.5 px-5 pb-4 pt-5">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-stone-900 text-accent-500">
-          <Scale size={19} />
-        </span>
+        <LogoMark size={34} className="shrink-0" />
         <span className="font-serif text-[24px] leading-none tracking-tight text-stone-950">Plumbline Jury</span>
       </Link>
       <div className="px-4">{state && <BrandSwitcher />}</div>
